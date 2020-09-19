@@ -1,0 +1,259 @@
+package dipra
+
+import (
+	"fmt"
+	"net/http"
+	"os"
+	"path"
+	"sort"
+	"strings"
+	"sync"
+)
+
+var (
+	welcome = `Welcome to Dipra mini framework golang for build service`
+)
+
+type (
+
+	// HandlerFunc ro running HandlerFunc context
+	HandlerFunc func(*Context) error
+
+	// MiddlewareFunc to handle middleware
+	MiddlewareFunc func(HandlerFunc) HandlerFunc
+
+	// Engine core of dipra
+	Engine struct {
+		// Route
+		Route []Route
+		// MiddlewareFunc func
+		HandleMiddleware []MiddlewareFunc
+		// Sync.Pool
+		Pool sync.Pool
+		// Node
+		Node Node
+	}
+
+	// Route for handler routing
+	Route struct {
+		Path    string
+		Method  string
+		Handler HandlerFunc
+	}
+	// WrapError for handler error
+	WrapError struct {
+		Code     int         `json:"code"`
+		Message  interface{} `json:"message"`
+		Internal error       `json:"-"`
+	}
+
+	// M map[string]interface{}
+	M map[string]interface{}
+)
+
+const (
+	// DefaultPort is 8080
+	DefaultPort string = ":8080"
+)
+
+// Default Engine
+func Default() *Engine {
+	e := &Engine{
+		Route: []Route{},
+		Node:  Node{},
+	}
+	e.Pool.New = func() interface{} {
+		return e.InitialContext(nil, nil)
+	}
+	return e
+}
+
+// InitialContext ...
+func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context {
+	return &Context{
+		ResponseWriter: w,
+		Request:        r,
+		Writen: ResponseWriter{
+			Response:   w,
+			statusCode: http.StatusOK,
+		},
+	}
+}
+
+// AddToObjectEngine is used for set routing and middleware
+func (e *Engine) AddToObjectEngine(path, method string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	e.HandleMiddleware = append(e.HandleMiddleware, middleware...)
+	e.Route = append(e.Route, Route{Path: path, Method: method, Handler: handler})
+}
+
+// Use is used for add handlefuncs
+func (e *Engine) Use(middleware ...MiddlewareFunc) {
+	e.HandleMiddleware = append(e.HandleMiddleware, middleware...)
+}
+
+// GET is used HTTP Request with GET METHOD
+func (e *Engine) GET(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	e.AddToObjectEngine(path, http.MethodGet, handler, middleware...)
+}
+
+// POST is used HTTP Request with POST METHOD
+func (e *Engine) POST(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	e.AddToObjectEngine(path, http.MethodPost, handler, middleware...)
+}
+
+// PUT is used HTTP Request with PUT METHOD
+func (e *Engine) PUT(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	e.AddToObjectEngine(path, http.MethodPut, handler, middleware...)
+}
+
+// PATCH is used HTTP Request with PATCH METHOD
+func (e *Engine) PATCH(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	e.AddToObjectEngine(path, http.MethodPatch, handler, middleware...)
+}
+
+// DELETE is used HTTP Request with DELETE METHOD
+func (e *Engine) DELETE(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	e.AddToObjectEngine(path, http.MethodDelete, handler, middleware...)
+}
+
+// OPTION is used HTTP Request with OPTION METHOD
+func (e *Engine) OPTION(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	e.AddToObjectEngine(path, http.MethodOptions, handler, middleware...)
+}
+
+// TRACE is used HTTP Request with TRACE METHOD
+func (e *Engine) TRACE(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	e.AddToObjectEngine(path, http.MethodTrace, handler, middleware...)
+}
+
+// CONNECT is used HTTP Request with CONNECT METHOD
+func (e *Engine) CONNECT(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	e.AddToObjectEngine(path, http.MethodConnect, handler, middleware...)
+}
+
+// Static is used define http to get file type
+func (e *Engine) Static(prefix, root string) {
+	p := func(h HandlerFunc) HandlerFunc {
+		return func(c *Context) error {
+			cleanURL := path.Clean(c.Request.URL.String())
+			name := path.Join(root, strings.ReplaceAll(cleanURL, prefix, ""))
+
+			isExist, err := os.Stat(root)
+			if err != nil || !isExist.IsDir() {
+				return err
+			}
+
+			return c.File(name)
+		}
+	}
+	e.Use(p)
+}
+
+// defaulterrorHttp is used set error default
+func defaulterrorHTTP(w http.ResponseWriter, code int, err error) MiddlewareFunc {
+	return func(c HandlerFunc) HandlerFunc {
+		return func(c *Context) error {
+			return c.JSON(code, M{
+				"error": err,
+			})
+		}
+	}
+}
+
+func defaultErrorHandler(c HandlerFunc, errs WrapError) HandlerFunc {
+	return func(c *Context) error {
+		return c.JSON(errs.Code, M{
+			"error": errs,
+		})
+	}
+}
+
+// ServeHTTP is used run http server
+func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	ctx := e.Pool.Get().(*Context)
+	ctx.Reset(w, r)
+	rt, code := e.HandlerRoute(ctx)
+
+	switch code {
+	case http.StatusMethodNotAllowed:
+		rt.Handler = defaultErrorHandler(rt.Handler, WrapError{
+			Code:    http.StatusMethodNotAllowed,
+			Message: http.StatusText(http.StatusMethodNotAllowed),
+		})
+
+	case http.StatusNotFound:
+		rt.Handler = defaultErrorHandler(rt.Handler, WrapError{
+			Code:    http.StatusNotFound,
+			Message: http.StatusText(http.StatusNotFound),
+		})
+	}
+
+	if e.HandleMiddleware != nil {
+		rt.Handler = e.WrapMiddleware(rt.Handler)
+	}
+
+	rt.Handler(ctx)
+	e.Pool.Put(ctx)
+}
+
+// HandlerRoute is used running context http
+func (e *Engine) HandlerRoute(c *Context) (r Route, code int) {
+
+	sort.Slice(e.Route, func(i, j int) bool {
+		return (e.Route[i].Path[1:len(e.Route[i].Path)] == c.URL.String()[1:len(c.URL.String())])
+	})
+
+	for _, rt := range e.Route {
+		e.Node.SetNode(c, rt)
+		url := e.Node.ReserverURI()
+		uriCtx := c.URL.EscapedPath()[1:len(c.URL.EscapedPath())]
+		if uriCtx == url {
+			if c.Method != rt.Method {
+				return rt, http.StatusMethodNotAllowed
+			}
+			return rt, code
+		}
+	}
+
+	return r, http.StatusNotFound
+}
+
+// WrapMiddleware is used wrapping with returns HandlerFunc
+func (e *Engine) WrapMiddleware(h HandlerFunc) HandlerFunc {
+	for i := len(e.HandleMiddleware) - 1; i >= 0; i-- {
+		if e.HandleMiddleware[i](h) != nil {
+			h = e.HandleMiddleware[i](h)
+		}
+	}
+	return h
+}
+
+// Run Server with HTTP
+func (e *Engine) Run(addr string) (err error) {
+	if addr == "" {
+		addr = DefaultPort
+	}
+
+	fmt.Fprintf(os.Stdout, fmt.Sprintf("%v\nServer started with http %v[::]:%v %v\n", welcome, Green, addr, Reset))
+
+	err = http.ListenAndServe(addr, e)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+// RunTLSaddr Server with HTTPS
+func (e *Engine) RunTLSaddr(addr string, certFile, keyFile string) (err error) {
+	if addr == "" {
+		addr = DefaultPort
+	}
+	fmt.Fprintf(os.Stdout, fmt.Sprintf("%v\nServer started with https %v[::]:%v %v\n", welcome, Green, addr, Reset))
+	err = http.ListenAndServeTLS(addr, certFile, keyFile, e)
+	if err != nil {
+		return err
+	}
+
+	return err
+}
