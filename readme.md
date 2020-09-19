@@ -1,6 +1,6 @@
 # Dipra mini framework golang
 
-Welcome to dipra. Dipra is mini framework golang to build service application. Dipra have high performance speed. Make nvative source code. Suitable for build REST API.
+Welcome to dipra. Dipra is mini framework golang to build service application. Dipra have high performance speed. Makes native source codes. Suitable for build REST API.
 
 ## Feature
  - HTTP with all method and static file.
