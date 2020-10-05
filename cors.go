@@ -48,8 +48,8 @@ func CORS() MiddlewareFunc {
 	return BuildCors(DefaultConfig())
 }
 
-// CorsWithConifg is used setting cors
-func CorsWithConifg(l CORSConfig) MiddlewareFunc {
+// CorsWithConfig is used setting cors
+func CorsWithConfig(l CORSConfig) MiddlewareFunc {
 	return BuildCors(l)
 }
 

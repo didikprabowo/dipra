@@ -17,7 +17,7 @@ type (
 func main() {
 
 	route := dipra.Default()
-	route.Use(dipra.CorsWithConifg(dipra.CORSConfig{
+	route.Use(dipra.CorsWithConfig(dipra.CORSConfig{
 		AllowOrigins: []string{"https://www.google.com"},
 		AllowMethod:  []string{"*"},
 		AllowHeaders: []string{"*"},
