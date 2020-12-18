@@ -2,6 +2,7 @@ package dipra
 
 // Param ...
 type Param struct {
+	Index int
 	Key   string
 	Value string
 }
@@ -31,4 +32,8 @@ func (p *Param) ParamByName(b string) string {
 // GetParam ...
 func (p *Param) GetParam() *Param {
 	return p
+}
+
+func (p *Param) clean() {
+	params = []Param{}
 }

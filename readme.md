@@ -96,8 +96,8 @@ To get request from body raw you can bind with type mime(JSON,XML). By besides, 
 ```go
 // Example : /ping/1
 r := dipra.Default()
-r.GET("/ping:/:id", func(c *dipra.Context) error {
-        id := c.Param(id)
+r.GET("/ping/:id", func(c *dipra.Context) error {
+        id := c.Param("id")
         return c.JSON(http.StatusOK, dipra.M{
                 "data": id,
         })

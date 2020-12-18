@@ -1,6 +1,7 @@
 package dipra
 
 import (
+	"errors"
 	"path"
 	"strings"
 )
@@ -21,7 +22,10 @@ func (e *Node) SetNode(ctx *Context, Route Route) {
 }
 
 // ReserverURI ...
-func (e *Node) ReserverURI() (out string) {
+func (e *Node) ReserverURI() (out string, err error) {
+
+	e.Ctx.Params.clean()
+
 	var (
 		newURI []string
 	)
@@ -30,24 +34,35 @@ func (e *Node) ReserverURI() (out string) {
 	uri := strings.Split(e.CleanPath(e.Ctx.RequestURI), "/")
 
 	if len(rt) != len(uri) {
-		return ""
+		return "", err
 	}
+	Qpath := make(map[string]bool)
 
+	index := 0
 	for i := 0; i < len(rt); i++ {
+
 		if strings.HasPrefix(rt[i], ":") {
 			param := Param{
 				Key:   rt[i][1:len(rt[i])],
 				Value: uri[i],
 			}
-			rt[i] = uri[i]
-			e.Ctx.Params.SetParam(param)
+
+			switch {
+			case Qpath[param.Key]:
+				return out, errors.New("Can't used double parameter")
+			default:
+				rt[i] = uri[i]
+				index++
+				e.Ctx.Params.SetParam(param)
+				Qpath[param.Key] = true
+				newURI = append(newURI, rt[i])
+			}
 		}
 
-		newURI = append(newURI, rt[i])
 	}
 	e.Fullpatch = newURI
 
-	return strings.Join(newURI, "/")
+	return strings.Join(newURI, "/"), err
 }
 
 // CleanPath ...

@@ -44,7 +44,7 @@ type (
 	WrapError struct {
 		Code     int         `json:"code"`
 		Message  interface{} `json:"message"`
-		Internal error       `json:"-"`
+		Internal string      `json:"-"`
 	}
 
 	// M map[string]interface{}
@@ -77,7 +77,13 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 			Response:   w,
 			statusCode: http.StatusOK,
 		},
+		Params: Param{},
 	}
+}
+
+// Error WrapError
+func (e *WrapError) Error() string {
+	return fmt.Sprintf("syntax error %v:", e.Message)
 }
 
 // AddToObjectEngine is used for set routing and middleware
@@ -160,10 +166,10 @@ func defaulterrorHTTP(w http.ResponseWriter, code int, err error) MiddlewareFunc
 	}
 }
 
-func defaultErrorHandler(c HandlerFunc, errs WrapError) HandlerFunc {
+func defaultErrorHandler(c HandlerFunc, werrx *WrapError) HandlerFunc {
 	return func(c *Context) error {
-		return c.JSON(errs.Code, M{
-			"error": errs,
+		return c.JSON(werrx.Code, M{
+			"error": werrx,
 		})
 	}
 }
@@ -173,20 +179,9 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := e.Pool.Get().(*Context)
 	ctx.Reset(w, r)
-	rt, code := e.HandlerRoute(ctx)
-
-	switch code {
-	case http.StatusMethodNotAllowed:
-		rt.Handler = defaultErrorHandler(rt.Handler, WrapError{
-			Code:    http.StatusMethodNotAllowed,
-			Message: http.StatusText(http.StatusMethodNotAllowed),
-		})
-
-	case http.StatusNotFound:
-		rt.Handler = defaultErrorHandler(rt.Handler, WrapError{
-			Code:    http.StatusNotFound,
-			Message: http.StatusText(http.StatusNotFound),
-		})
+	rt, err := e.HandlerRoute(ctx)
+	if err != nil {
+		rt.Handler = defaultErrorHandler(rt.Handler, err)
 	}
 
 	if e.HandleMiddleware != nil {
@@ -198,7 +193,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandlerRoute is used running context http
-func (e *Engine) HandlerRoute(c *Context) (r Route, code int) {
+func (e *Engine) HandlerRoute(c *Context) (r Route, werrx *WrapError) {
 
 	sort.Slice(e.Route, func(i, j int) bool {
 		return (e.Route[i].Path[1:len(e.Route[i].Path)] == c.URL.String()[1:len(c.URL.String())])
@@ -206,17 +201,31 @@ func (e *Engine) HandlerRoute(c *Context) (r Route, code int) {
 
 	for _, rt := range e.Route {
 		e.Node.SetNode(c, rt)
-		url := e.Node.ReserverURI()
+		url, err := e.Node.ReserverURI()
+		if err != nil {
+			werrx := &WrapError{
+				Code:     http.StatusInternalServerError,
+				Message:  err.Error(),
+				Internal: http.StatusText(http.StatusInternalServerError),
+			}
+			return rt, werrx
+		}
 		uriCtx := c.URL.EscapedPath()[1:len(c.URL.EscapedPath())]
 		if uriCtx == url {
 			if c.Method != rt.Method {
-				return rt, http.StatusMethodNotAllowed
+				return rt, &WrapError{
+					Code:    http.StatusMethodNotAllowed,
+					Message: http.StatusText(http.StatusMethodNotAllowed),
+				}
 			}
-			return rt, code
+			return rt, werrx
 		}
 	}
 
-	return r, http.StatusNotFound
+	return r, &WrapError{
+		Code:    http.StatusNotFound,
+		Message: http.StatusText(http.StatusNotFound),
+	}
 }
 
 // WrapMiddleware is used wrapping with returns HandlerFunc
