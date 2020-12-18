@@ -55,10 +55,10 @@ func (e *Node) ReserverURI() (out string, err error) {
 				index++
 				e.Ctx.Params.SetParam(param)
 				Qpath[param.Key] = true
-				newURI = append(newURI, rt[i])
 			}
 		}
 
+		newURI = append(newURI, rt[i])
 	}
 	e.Fullpatch = newURI
 
