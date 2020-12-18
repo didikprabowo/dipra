@@ -1,8 +1,7 @@
 package dipra
 
 import (
-	"fmt"
-	"net/http"
+	"errors"
 	"path"
 	"strings"
 )
@@ -50,8 +49,7 @@ func (e *Node) ReserverURI() (out string, err error) {
 
 			switch {
 			case Qpath[param.Key]:
-				defaulterrorHTTP(e.Ctx.ResponseWriter, http.StatusInternalServerError, fmt.Errorf("Can't use double parameter"))
-				return out, fmt.Errorf("Can't use double parameter")
+				return out, errors.New("Can't used double parameter")
 			default:
 				rt[i] = uri[i]
 				index++
