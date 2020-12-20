@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"math/rand"
 	"net/http"
 
 	"github.com/didikprabowo/dipra"
@@ -9,6 +11,7 @@ import (
 func main() {
 
 	r := dipra.Default()
+	r.Use(dipra.Logger())
 
 	// Normal Group
 	v1 := r.Group("/v2")
@@ -16,7 +19,7 @@ func main() {
 	{
 		// {basepath}/v1
 		v1.GET("/", func(c *dipra.Context) error {
-			return c.String(200, "Welcome to api version v2")
+			return c.String(200, fmt.Sprintf("Welcome to api version v1 %+f\n", rand.Float64()))
 		})
 
 	}
@@ -35,7 +38,7 @@ func main() {
 	{
 		// {basepath}/v2
 		v2.GET("/", func(c *dipra.Context) error {
-			return c.String(200, "Welcome to api version v1")
+			return c.String(200, fmt.Sprintf("Welcome to api version v2 %+f\n", rand.Float64()))
 		})
 
 	}
