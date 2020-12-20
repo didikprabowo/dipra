@@ -14,7 +14,7 @@ func main() {
 	r.Use(dipra.Logger())
 
 	// Normal Group
-	v1 := r.Group("/v2")
+	v1 := r.Group("/v1")
 
 	{
 		// {basepath}/v1
@@ -25,7 +25,7 @@ func main() {
 	}
 
 	// Group use middleware
-	v2 := r.Group("/v1", func(hf dipra.HandlerFunc) dipra.HandlerFunc {
+	v2 := r.Group("/v2", func(hf dipra.HandlerFunc) dipra.HandlerFunc {
 		return func(c *dipra.Context) (err error) {
 			if c.Query("name") == "jhon" {
 				return c.String(http.StatusUnprocessableEntity, "Can't continue")
