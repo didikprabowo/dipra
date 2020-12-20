@@ -24,6 +24,7 @@ type (
 
 	// Engine core of dipra
 	Engine struct {
+		Prefix string
 		// Route
 		Route []Route
 		// MiddlewareFunc func
@@ -89,12 +90,19 @@ func (e *WrapError) Error() string {
 // AddToObjectEngine is used for set routing and middleware
 func (e *Engine) AddToObjectEngine(path, method string, handler HandlerFunc, middleware ...MiddlewareFunc) {
 	e.HandleMiddleware = append(e.HandleMiddleware, middleware...)
-	e.Route = append(e.Route, Route{Path: path, Method: method, Handler: handler})
+	e.Route = append(e.Route, Route{Path: e.Prefix + path, Method: method, Handler: handler})
 }
 
 // Use is used for add handlefuncs
 func (e *Engine) Use(middleware ...MiddlewareFunc) {
 	e.HandleMiddleware = append(e.HandleMiddleware, middleware...)
+}
+
+// Group is used for grouped route
+func (e *Engine) Group(group string, m ...MiddlewareFunc) *Engine {
+	e.Prefix = group
+	e.HandleMiddleware = append(e.HandleMiddleware, m...)
+	return e
 }
 
 // GET is used HTTP Request with GET METHOD
