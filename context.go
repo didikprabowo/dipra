@@ -245,7 +245,12 @@ func (c *Context) File(path string) error {
 		defaulterrorHTTP(c.ResponseWriter, http.StatusInternalServerError, err)
 	}
 
+	defer f.Close()
+
 	s, err := f.Stat()
+	if err != nil {
+		defaulterrorHTTP(c.ResponseWriter, http.StatusInternalServerError, err)
+	}
 	if s.IsDir() {
 		index := strings.TrimSuffix(path, "/") + path
 		if _, err := os.Open(index); err != nil {

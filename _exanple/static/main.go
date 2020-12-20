@@ -6,9 +6,13 @@ import (
 
 func main() {
 	r := dipra.Default()
-	r.GET("/pps", func(c *dipra.Context) error {
-		return c.File("public/p.png")
+	r.GET("/didikprabowo", func(c *dipra.Context) (err error) {
+		return c.File("public/p.pngs")
+		return err
 	})
-	r.Static("/static", "./public")
-	r.Run(":9000")
+	r.GET("/p", func(c *dipra.Context) (err error) {
+		return c.JSON(200, "s")
+	})
+	// r.Static("/static", "./public")
+	r.Run(":9020")
 }

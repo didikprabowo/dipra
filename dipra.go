@@ -84,7 +84,7 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 
 // Error WrapError
 func (e *WrapError) Error() string {
-	return fmt.Sprintf("syntax error %v:", e.Message)
+	return fmt.Sprintf("Syntax error %v:", e.Message)
 }
 
 // AddToObjectEngine is used for set routing and middleware
@@ -174,11 +174,31 @@ func defaulterrorHTTP(w http.ResponseWriter, code int, err error) MiddlewareFunc
 	}
 }
 
-func defaultErrorHandler(c HandlerFunc, werrx *WrapError) HandlerFunc {
+func defaultErrorHandler(c HandlerFunc, err error) HandlerFunc {
+
+	var (
+		message = M{}
+	)
+
+	he, ok := err.(*WrapError)
+
+	if !ok {
+		he = &WrapError{
+			Code:    http.StatusInternalServerError,
+			Message: http.StatusText(http.StatusInternalServerError),
+		}
+	}
+
+	if msg, ok := he.Message.(string); ok {
+		message["error"] = msg
+	} else {
+		message["error"] = he.Message.(error).Error()
+	}
+
+	message["code"] = he.Code
+
 	return func(c *Context) error {
-		return c.JSON(werrx.Code, M{
-			"error": werrx,
-		})
+		return c.JSON(he.Code, message)
 	}
 }
 
@@ -197,27 +217,29 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rt.Handler(ctx)
+
 	e.Pool.Put(ctx)
 }
 
 // HandlerRoute is used running context http
-func (e *Engine) HandlerRoute(c *Context) (r Route, werrx *WrapError) {
+func (e *Engine) HandlerRoute(c *Context) (r Route, err error) {
 
 	sort.Slice(e.Route, func(i, j int) bool {
 		return (e.Route[i].Path[1:len(e.Route[i].Path)] == c.URL.String()[1:len(c.URL.String())])
 	})
 
 	for _, rt := range e.Route {
+
 		e.Node.SetNode(c, rt)
 		url, err := e.Node.ReserverURI()
 		if err != nil {
-			werrx := &WrapError{
+			return rt, &WrapError{
 				Code:     http.StatusInternalServerError,
-				Message:  err.Error(),
+				Message:  err,
 				Internal: http.StatusText(http.StatusInternalServerError),
 			}
-			return rt, werrx
 		}
+
 		uriCtx := c.URL.EscapedPath()[1:len(c.URL.EscapedPath())]
 		if uriCtx == url {
 			if c.Method != rt.Method {
@@ -226,10 +248,10 @@ func (e *Engine) HandlerRoute(c *Context) (r Route, werrx *WrapError) {
 					Message: http.StatusText(http.StatusMethodNotAllowed),
 				}
 			}
-			return rt, werrx
+
+			return rt, err
 		}
 	}
-
 	return r, &WrapError{
 		Code:    http.StatusNotFound,
 		Message: http.StatusText(http.StatusNotFound),
