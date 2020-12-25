@@ -11,7 +11,18 @@ import (
 )
 
 var (
-	welcome = `Welcome to Dipra mini framework golang for build service`
+	version = `v1.0.4`
+	welcome = `
+ Welcome to :
+ ______  _                    
+ |  _  \(_)                   
+ | | | | _  _ __   _ __  __ _ 
+ | | | || || '_ \ | '__|/ _  |
+ | |/ / | || |_) || |  | (_| |
+ |___/  |_|| .__/ |_|   \__,_|
+ 	| |                
+ 	|_|  %v             										  	
+ Mini framework for build microservice, High speed and small size`
 )
 
 type (
@@ -24,15 +35,23 @@ type (
 
 	// Engine core of dipra
 	Engine struct {
+		// Prefix
 		Prefix string
+
 		// Route
 		Route []Route
+
 		// MiddlewareFunc func
 		HandleMiddleware []MiddlewareFunc
+
 		// Sync.Pool
 		Pool sync.Pool
+
 		// Node
 		Node Node
+
+		// IsDebug...
+		IsDebug bool
 	}
 
 	// Route for handler routing
@@ -44,6 +63,8 @@ type (
 
 	// M map[string]interface{}
 	M map[string]interface{}
+
+	// ErrorMessage ...
 )
 
 const (
@@ -60,7 +81,30 @@ func Default() *Engine {
 	e.Pool.New = func() interface{} {
 		return e.InitialContext(nil, nil)
 	}
+	e.Route = append(e.Route, Route{
+		Path:   "/",
+		Method: http.MethodGet,
+		Handler: func(c *Context) error {
+			return c.JSON(http.StatusOK, M{
+				"version":     version,
+				"message":     "Welcome to dipra, have fun",
+				"code":        http.StatusOK,
+				"quick_start": "https://github.com/didikprabowo/dipra#Installation",
+				"language":    "GO(Golang)",
+				"author": M{
+					"name":   "Didik Prabowo",
+					"github": "https://github.com/didikprabowo",
+				},
+			})
+		},
+	})
+	e.IsDebug = true
 	return e
+}
+
+// Debug for used config debug
+func (e *Engine) Debug(debug bool) {
+	e.IsDebug = debug
 }
 
 // InitialContext ...
@@ -136,19 +180,18 @@ func (e *Engine) CONNECT(path string, handler HandlerFunc, middleware ...Middlew
 
 // Static is used define http to get file type
 func (e *Engine) Static(prefix, root string) {
-	p := func(h HandlerFunc) HandlerFunc {
-		return func(c *Context) error {
-			cleanURL := path.Clean(c.Request.URL.String())
-			name := path.Join(root, strings.ReplaceAll(cleanURL, prefix, ""))
+	cp := func(c *Context) error {
+		cleanURL := path.Clean(c.Request.URL.String())
+		name := path.Join(root, strings.ReplaceAll(cleanURL, prefix, ""))
 
-			isExist, err := os.Stat(root)
-			if err != nil || !isExist.IsDir() {
-				return err
-			}
-			return c.File(name)
+		isExist, err := os.Stat(root)
+		if err != nil || !isExist.IsDir() {
+			return err
 		}
+		return c.File(name)
 	}
-	e.Use(p)
+
+	e.AddToObjectEngine(prefix+"/*", http.MethodGet, cp)
 }
 
 // defaulterrorHttp is used set error default
@@ -219,32 +262,24 @@ func (e *Engine) HandlerRoute(c *Context) (r Route, werrx *WrapError) {
 	})
 
 	for _, rt := range e.Route {
+
 		e.Node.SetNode(c, rt)
 		url, err := e.Node.ReserverURI()
 		if err != nil {
-			werrx := &WrapError{
-				Code:     http.StatusInternalServerError,
-				Message:  err.Error(),
-				Internal: http.StatusText(http.StatusInternalServerError),
-			}
+			werrx.Message = err.Error()
+			werrx.Code = http.StatusInternalServerError
 			return rt, werrx
 		}
 		uriCtx := c.URL.EscapedPath()[1:len(c.URL.EscapedPath())]
 		if uriCtx == url {
 			if c.Method != rt.Method {
-				return rt, &WrapError{
-					Code:    http.StatusMethodNotAllowed,
-					Message: http.StatusText(http.StatusMethodNotAllowed),
-				}
+				return rt, Err405
 			}
 			return rt, werrx
 		}
 	}
 
-	return r, &WrapError{
-		Code:    http.StatusNotFound,
-		Message: http.StatusText(http.StatusNotFound),
-	}
+	return r, Err404
 }
 
 // WrapMiddleware is used wrapping with returns HandlerFunc
@@ -263,7 +298,10 @@ func (e *Engine) Run(addr string) (err error) {
 		addr = DefaultPort
 	}
 
-	fmt.Fprintf(os.Stdout, fmt.Sprintf("%v\nServer started with http %v[::]:%v %v\n", welcome, Green, addr, Reset))
+	if e.IsDebug {
+		fmt.Fprintf(os.Stdout, fmt.Sprintf(welcome, Blue+version+Reset))
+		fmt.Fprintf(os.Stdout, fmt.Sprintf("\n Server started with http %v[::]:%v %v\n", Green, addr, Reset))
+	}
 
 	err = http.ListenAndServe(addr, e)
 	if err != nil {
@@ -277,7 +315,12 @@ func (e *Engine) RunTLSaddr(addr string, certFile, keyFile string) (err error) {
 	if addr == "" {
 		addr = DefaultPort
 	}
-	fmt.Fprintf(os.Stdout, fmt.Sprintf("%v\nServer started with https %v[::]:%v %v\n", welcome, Green, addr, Reset))
+
+	if e.IsDebug {
+		fmt.Fprintf(os.Stdout, fmt.Sprintf(welcome, Blue+version+Reset))
+		fmt.Fprintf(os.Stdout, fmt.Sprintf("\n Server started with http %v[::]:%v %v\n", Green, addr, Reset))
+	}
+
 	err = http.ListenAndServeTLS(addr, certFile, keyFile, e)
 	if err != nil {
 		return err

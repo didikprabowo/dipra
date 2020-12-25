@@ -46,6 +46,9 @@ type (
 		Pool *sync.Pool
 		// Latency
 		Latency time.Duration
+
+		// Error
+		Err string
 	}
 )
 
@@ -68,6 +71,7 @@ func Logger() MiddlewareFunc {
 			start := time.Now()
 			if err := h(c); err != nil {
 				c.SetError(err)
+				l.Err = err.Error()
 			}
 
 			end := time.Now()
@@ -92,15 +96,18 @@ func (l LoggerConfig) BuildLogger() {
 	buf.Reset()
 
 	out := fmt.Sprintf(
-		"[DIPRA] %s%s%s => %s%s%s | %s%d%s | %s\"%s %s\" |%s %s%s %s\n",
+		" [DIPRA] %s%s%s => %s%s%s | %s%d%s | %s\"%s %s\" |%s %s%s %s",
 		White, time.Now().Format("02/01/2006 15:04:05"), Reset,
 		l.GetColor(), l.Request.Method, Reset,
 		l.GetColorStatusCode(l.StatusCode), l.StatusCode, Reset,
 		Cyan, l.Request.Host, l.Request.URL, Reset,
 		Green, l.Latency, Reset,
 	)
+	if l.Err != "" {
+		out += fmt.Sprintf("| %s%v%s", Red, l.Err, Reset)
+	}
 
-	buf.WriteString(out)
+	buf.WriteString(out + "\n")
 	l.Type.Write(buf.Bytes())
 	l.Pool.Put(buf)
 }

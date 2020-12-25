@@ -3,6 +3,7 @@ package dipra
 import (
 	"errors"
 	"path"
+	"regexp"
 	"strings"
 )
 
@@ -23,7 +24,6 @@ func (e *Node) SetNode(ctx *Context, Route Route) {
 
 // ReserverURI ...
 func (e *Node) ReserverURI() (out string, err error) {
-
 	e.Ctx.Params.clean()
 
 	var (
@@ -41,7 +41,12 @@ func (e *Node) ReserverURI() (out string, err error) {
 	index := 0
 	for i := 0; i < len(rt); i++ {
 
-		if strings.HasPrefix(rt[i], ":") {
+		if rt[i] == "" {
+			continue
+		}
+
+		switch {
+		case strings.HasPrefix(rt[i], ":"):
 			param := Param{
 				Key:   rt[i][1:len(rt[i])],
 				Value: uri[i],
@@ -56,10 +61,26 @@ func (e *Node) ReserverURI() (out string, err error) {
 				e.Ctx.Params.SetParam(param)
 				Qpath[param.Key] = true
 			}
+		case strings.HasPrefix(rt[i], "*"):
+			rt[i] = uri[i]
 		}
+
+		// Validation Request URL
+		pathValidation := func(path string) (err error) {
+
+			isAllow := regexp.MustCompile(`[a-zA-Z0-9]$`)
+			ok := isAllow.MatchString(path)
+			if !ok {
+				err = errors.New("Character URL not allowed")
+			}
+			return err
+		}
+
+		err = pathValidation(rt[i])
 
 		newURI = append(newURI, rt[i])
 	}
+
 	e.Fullpatch = newURI
 
 	return strings.Join(newURI, "/"), err
@@ -70,6 +91,7 @@ func (e *Node) CleanPath(r string) string {
 	r = path.Clean(r)
 	r = strings.TrimPrefix(r, "/")
 	r = strings.TrimSuffix(r, "/")
+	r = strings.TrimSpace(r)
 	if len(r) == 0 {
 		return ""
 	}
