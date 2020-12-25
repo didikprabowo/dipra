@@ -14,7 +14,6 @@ func TestEngine(t *testing.T) {
 	e := Default()
 
 	assert.NotNil(t, e)
-	assert.Empty(t, e.Route)
 }
 
 // TestInitialContext ...

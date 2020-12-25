@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+// Iface be able used
+
 type (
 	// Header ...
 	Header string
@@ -67,8 +69,10 @@ const (
 	// HeaderWWWAuthenticate ...
 	HeaderWWWAuthenticate Header = "WWW-Authenticate"
 	// HeaderXForwardedFor ...
-	HeaderXForwardedFor       Header = "X-Forwarded-For"
-	HeaderXForwardedProto     Header = "X-Forwarded-Proto"
+	HeaderXForwardedFor Header = "X-Forwarded-For"
+	// HeaderXForwardedProto ...
+	HeaderXForwardedProto Header = "X-Forwarded-Proto"
+	// HeaderXForwardedProtocol ...
 	HeaderXForwardedProtocol  Header = "X-Forwarded-Protocol"
 	HeaderXForwardedSsl       Header = "X-Forwarded-Ssl"
 	HeaderXUrlScheme          Header = "X-Url-Scheme"
@@ -273,7 +277,19 @@ func (c *Context) GetRequest() *http.Request {
 	return c.Request
 }
 
-// Error for Get Error
+// SetError for Get Error
 func (c *Context) SetError(err error) {
 	c.Engine.HandlerError(err, c)
+}
+
+// GetHeader for get value header
+func (c *Context) GetHeader(key string) interface{} {
+	switch key {
+	case "*":
+		return c.GetRequest().Header
+	case "":
+		return ""
+	default:
+		return c.GetRequest().Header.Get(key)
+	}
 }
