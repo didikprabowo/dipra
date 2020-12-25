@@ -41,12 +41,6 @@ type (
 		Method  string
 		Handler HandlerFunc
 	}
-	// WrapError for handler error
-	WrapError struct {
-		Code     int         `json:"code"`
-		Message  interface{} `json:"message"`
-		Internal string      `json:"-"`
-	}
 
 	// M map[string]interface{}
 	M map[string]interface{}
@@ -80,11 +74,6 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 		},
 		Params: Param{},
 	}
-}
-
-// Error WrapError
-func (e *WrapError) Error() string {
-	return fmt.Sprintf("syntax error %v:", e.Message)
 }
 
 // AddToObjectEngine is used for set routing and middleware
@@ -174,12 +163,34 @@ func defaulterrorHTTP(w http.ResponseWriter, code int, err error) MiddlewareFunc
 	}
 }
 
+// defaultErrorHandler is used default handler
 func defaultErrorHandler(c HandlerFunc, werrx *WrapError) HandlerFunc {
 	return func(c *Context) error {
 		return c.JSON(werrx.Code, M{
 			"error": werrx,
 		})
 	}
+}
+
+// HandlerError for handler context error
+func (e *Engine) HandlerError(err error, c *Context) {
+
+	var (
+		r = M{}
+	)
+
+	eStr, ok := err.(*WrapError)
+	if !ok {
+		r["code"] = http.StatusInternalServerError
+		r["message"] = err.Error()
+	} else {
+		r["code"] = eStr.Code
+		r["message"] = eStr.Message.(string)
+	}
+
+	err = c.JSON(r["code"].(int), M{
+		"error": r,
+	})
 }
 
 // ServeHTTP is used run http server
@@ -196,8 +207,9 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rt.Handler = e.WrapMiddleware(rt.Handler)
 	}
 
-	rt.Handler(ctx)
-	e.Pool.Put(ctx)
+	if err := rt.Handler(ctx); err != nil {
+		e.HandlerError(err, ctx)
+	}
 }
 
 // HandlerRoute is used running context http
