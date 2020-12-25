@@ -239,22 +239,26 @@ func (c *Context) Redirect(url string, code int) {
 }
 
 // File is used get file type
-func (c *Context) File(path string) error {
+func (c *Context) File(path string) (err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 
-	s, err := f.Stat()
+	serveFile := func(path string) {
+		http.ServeFile(c.GetResponse(), c.GetRequest(), path)
+	}
+
+	s, _ := f.Stat()
 	if s.IsDir() {
 		index := strings.TrimSuffix(path, "/") + path
-		if _, err := os.Open(index); err != nil {
-			return err
+		if _, err = os.Open(index); err != nil {
+			return
 		}
 	}
 
-	http.ServeFile(c.GetResponse(), c.GetRequest(), path)
-	return nil
+	serveFile(path)
+	return
 }
 
 // GetResponse by Reset() or another set http with returns http.ResponseWriter
