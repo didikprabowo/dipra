@@ -10,8 +10,6 @@ before_install:
   - go test -v .
 install:
   - go get -v golang.org/x/lint/golint
-script:
-  - go test -race -coverprofile=coverage.txt -covermode=atomic
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
