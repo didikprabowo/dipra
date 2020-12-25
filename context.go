@@ -245,6 +245,8 @@ func (c *Context) File(path string) (err error) {
 		return err
 	}
 
+	defer f.Close()
+
 	serveFile := func(path string) {
 		http.ServeFile(c.GetResponse(), c.GetRequest(), path)
 	}
