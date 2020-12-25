@@ -61,11 +61,15 @@ func DefaultLoggerConfig() LoggerConfig {
 func Logger() MiddlewareFunc {
 	return func(h HandlerFunc) HandlerFunc {
 		return func(c *Context) (err error) {
+
 			l := DefaultLoggerConfig()
 			l.Request = c.GetRequest()
 			l.Response = c.GetResponse()
 			start := time.Now()
-			h(c)
+			if err := h(c); err != nil {
+				c.SetError(err)
+			}
+
 			end := time.Now()
 			l.Latency = end.Sub(start)
 			l.StatusCode = c.Writen.statusCode

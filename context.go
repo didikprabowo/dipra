@@ -242,14 +242,14 @@ func (c *Context) Redirect(url string, code int) {
 func (c *Context) File(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
-		defaulterrorHTTP(c.ResponseWriter, http.StatusInternalServerError, err)
+		return err
 	}
 
 	s, err := f.Stat()
 	if s.IsDir() {
 		index := strings.TrimSuffix(path, "/") + path
 		if _, err := os.Open(index); err != nil {
-			defaulterrorHTTP(c.ResponseWriter, http.StatusInternalServerError, err)
+			return err
 		}
 	}
 
@@ -265,4 +265,9 @@ func (c *Context) GetResponse() http.ResponseWriter {
 // GetRequest returns *http.request
 func (c *Context) GetRequest() *http.Request {
 	return c.Request
+}
+
+// Error for Get Error
+func (c *Context) SetError(err error) {
+	c.Engine.HandlerError(err, c)
 }
