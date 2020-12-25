@@ -1,0 +1,17 @@
+language: go
+go:
+  - 1.12.x
+  - tip
+env:
+  - GO111MODULE=on
+before_install:
+  - echo "before_install"
+  - go mod tidy
+  - go test -v .
+install:
+  - go get -v golang.org/x/lint/golint
+script:
+  - go test -race -coverprofile=coverage.txt -covermode=atomic
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
