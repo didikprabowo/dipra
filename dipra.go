@@ -145,7 +145,6 @@ func (e *Engine) Static(prefix, root string) {
 			if err != nil || !isExist.IsDir() {
 				return err
 			}
-
 			return c.File(name)
 		}
 	}
