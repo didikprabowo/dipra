@@ -264,11 +264,15 @@ import (
 )
 
 func main() {
-	r := dipra.Default()
+        r := dipra.Default()
+          // {{basepath}}/get-image
 	r.GET("/get-image", func(c *dipra.Context) error {
 		return c.File("public/p.png")
-	})
-	r.Static("/static", "./public")
+        })
+      
+         // {{basepath}}/static/p.png
+        r.Static("/static", "./public")
+       
 	r.Run(":9000")
 }
 ```
