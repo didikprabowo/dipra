@@ -104,5 +104,20 @@ func TestCtx(t *testing.T) {
 			assert.Equal(t, resperror, response.Body.String())
 		})
 	})
+}
 
+func TestParam(t *testing.T) {
+	d := Default()
+	req := httptest.NewRequest(http.MethodGet, "/user/OK/Created", strings.NewReader(pdataStr))
+	response := httptest.NewRecorder()
+
+	d.AddToObjectEngine("/user/:name/:status", http.MethodGet, nil)
+	c := d.InitialContext(response, req)
+	d.HandlerRoute(c)
+
+	c.String(http.StatusOK, c.Param("name")+"AND"+c.Param("status"))
+	assert.Equal(t, http.StatusText(http.StatusOK)+"AND"+http.StatusText(http.StatusCreated), response.Body.String())
+	assert.Equal(t, "/user/:name/:status", c.GetPatcher())
+	assert.Equal(t, "/user/OK/Created", c.GetPath())
+	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
 }

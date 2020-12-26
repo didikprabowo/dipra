@@ -30,6 +30,10 @@ type (
 		Engine *Engine
 		// Writen ResponseWriter
 		Writen ResponseWriter
+		// Path is URL
+		Path string
+		// Patcher is URL Route
+		Patcher string
 	}
 	// AccessControll ...
 	AccessControll string
@@ -149,6 +153,26 @@ func (c *Context) Query(param string) string {
 // Param by wlidcard /:id
 func (c *Context) Param(param string) string {
 	return c.Params.Param(param)
+}
+
+// SetPath URL
+func (c *Context) SetPath(p string) {
+	c.Path = p
+}
+
+// GetPath URL
+func (c *Context) GetPath() string {
+	return c.Path
+}
+
+// SetPatcher Curwl
+func (c *Context) SetPatcher(p string) {
+	c.Patcher = p
+}
+
+// GetPatcher Curwl
+func (c *Context) GetPatcher() string {
+	return c.Patcher
 }
 
 // GetQuery By param

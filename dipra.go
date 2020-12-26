@@ -63,8 +63,6 @@ type (
 
 	// M map[string]interface{}
 	M map[string]interface{}
-
-	// ErrorMessage ...
 )
 
 const (
@@ -277,6 +275,7 @@ func (e *Engine) HandlerRoute(c *Context) (r Route, werrx *WrapError) {
 			}
 			return rt, werrx
 		}
+
 	}
 
 	return r, Err404
