@@ -201,6 +201,12 @@ func (c *Context) String(code int, body string) (err error) {
 	if reflect.ValueOf(body).Kind() != reflect.String {
 		return http.ErrNotSupported
 	}
+
+	p := map[string]string{
+		string(HeaderContentType): string(MIMETextPlain),
+	}
+	c.Writen.WriteHeader(p)
+
 	c.Writen.WriteStatus(code)
 	c.Writen.Write([]byte(body))
 	return err
