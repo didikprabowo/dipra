@@ -136,3 +136,66 @@ func TestMiddleware(t *testing.T) {
 	e.ServeHTTP(res, request)
 	assert.Equal(t, http.StatusOK, res.Code)
 }
+
+func TestHandlerError(t *testing.T) {
+	e := Default()
+	t.Run("error", func(t *testing.T) {
+		t.Run("default-error", func(t *testing.T) {
+			e.GET("/test-handler-error", func(c *Context) error {
+				return errors.New("test-handler-error")
+			})
+
+			{
+				ht := httptest.NewRequest(http.MethodGet, "/test-handler-error", nil)
+				rec := httptest.NewRecorder()
+				e.ServeHTTP(rec, ht)
+				assert.Equal(t, http.StatusInternalServerError, rec.Code)
+				assert.Equal(t, rec.Body.String(), "{\"error\":{\"code\":500,\"message\":\"test-handler-error\"}}")
+			}
+		})
+
+		t.Run("custom-error", func(t *testing.T) {
+			e.GET("/test-custom-error", func(c *Context) error {
+				errors := &WrapError{
+					Code:    500,
+					Message: "custom-handler-error",
+				}
+				return errors
+			})
+
+			{
+				ht := httptest.NewRequest(http.MethodGet, "/test-custom-error", nil)
+				rec := httptest.NewRecorder()
+				e.ServeHTTP(rec, ht)
+
+				assert.Equal(t, http.StatusInternalServerError, rec.Code)
+				assert.Equal(t, rec.Body.String(), "{\"error\":{\"code\":500,\"message\":\"custom-handler-error\"}}")
+			}
+		})
+	})
+}
+
+func Test404(t *testing.T) {
+	e := Default()
+	ht := httptest.NewRequest(http.MethodGet, "/pagenotfound", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, ht)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	assert.Equal(t, rec.Body.String(), "{\"error\":{\"code\":404,\"message\":\"Not Found\"}}")
+}
+
+func Test405(t *testing.T) {
+	e := Default()
+
+	e.GET("/hai", func(c *Context) error {
+		return c.String(http.StatusOK, "Hai....")
+	})
+
+	ht := httptest.NewRequest(http.MethodPost, "/hai", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, ht)
+
+	assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
+	assert.Equal(t, rec.Body.String(), "{\"error\":{\"code\":405,\"message\":\"Method Not Allowed\"}}")
+}
