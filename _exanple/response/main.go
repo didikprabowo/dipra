@@ -49,9 +49,7 @@ func main() {
 			Address: "Wonogiri",
 		}
 
-		return c.XML(http.StatusOK, dipra.M{
-			"data": p,
-		})
+		return c.XML(http.StatusOK, p)
 	})
 
 	err := r.Run(":7000")

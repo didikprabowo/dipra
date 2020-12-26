@@ -21,8 +21,9 @@ var (
 	pdata = profile{
 		Name: "Didik prabowo",
 	}
-	pdataStr  = "{\"name\":\"Didik prabowo\"}"
-	perrorStr = errors.New("Something when wrongs")
+	pdataStr  = `{"name":"Didik prabowo"}`
+	pDataXML  = `<profile><Name>Didik prabowo</Name></profile>`
+	resperror = `{"error":{"code":500,"message":"Something when wrongs"}}`
 )
 
 func TestCtx(t *testing.T) {
@@ -76,6 +77,31 @@ func TestCtx(t *testing.T) {
 			} else {
 				t.Logf("Status Code :: Except %d, Actual %d", http.StatusOK, response.Code)
 			}
+		})
+
+		t.Run("xml", func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			response := httptest.NewRecorder()
+			c := d.InitialContext(response, req)
+
+			err := c.XML(http.StatusOK, pdata)
+			if assert.NoError(t, err) {
+				assert.Equal(t, http.StatusOK, response.Code)
+				assert.Equal(t, string(MIMEApplicationXML), response.Header().Get(string(HeaderContentType)))
+				assert.Equal(t, pDataXML, response.Body.String())
+			} else {
+				t.Logf("Status Code :: Except %d, Actual %d", http.StatusOK, response.Code)
+			}
+		})
+
+		t.Run("error", func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			response := httptest.NewRecorder()
+			c := d.InitialContext(response, req)
+
+			c.SetError(errors.New("Something when wrongs"))
+			assert.Equal(t, http.StatusInternalServerError, response.Code)
+			assert.Equal(t, resperror, response.Body.String())
 		})
 	})
 

@@ -1,3 +1,3 @@
 lint :
 	@echo "Welcome to dipra"
-	@go test .
+	@go test -v

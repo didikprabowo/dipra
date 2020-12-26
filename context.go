@@ -215,9 +215,9 @@ func (c *Context) String(code int, body string) (err error) {
 // XML response
 func (c *Context) XML(code int, body interface{}) (err error) {
 
-	xml, err := xml.MarshalIndent(body, " ", "  ")
+	xml, err := xml.MarshalIndent(body, "", "")
 	if err != nil {
-		defaulterrorHTTP(c.ResponseWriter, http.StatusInternalServerError, err)
+		return err
 	}
 	p := map[string]string{
 		string(HeaderContentType): string(MIMEApplicationXML),
