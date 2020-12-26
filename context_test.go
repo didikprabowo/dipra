@@ -133,3 +133,20 @@ func TestQuery(t *testing.T) {
 	assert.Equal(t, "didik", response.Body.String())
 	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
 }
+
+func TestShouldJSON(t *testing.T) {
+	d := Default()
+	req := httptest.NewRequest(http.MethodGet, "/", strings.NewReader(pdataStr))
+	res := httptest.NewRecorder()
+	req.Header.Add(string(HeaderContentType), string(MIMEApplicationJSON))
+	c := d.InitialContext(res, req)
+	c.SetBind(req)
+
+	var (
+		p profile
+	)
+
+	err := c.ShouldJSON(&p)
+	assert.NoError(t, err)
+	assert.Equal(t, pdata, p)
+}

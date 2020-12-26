@@ -107,15 +107,18 @@ func (e *Engine) Debug(debug bool) {
 
 // InitialContext ...
 func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context {
-	return &Context{
+	c := &Context{
 		ResponseWriter: w,
 		Request:        r,
 		Writen: ResponseWriter{
 			Response:   w,
 			statusCode: http.StatusOK,
 		},
-		Params: Param{},
+		Params:  Param{},
+		Binding: Binding{Request: r},
 	}
+
+	return c
 }
 
 // AddToObjectEngine is used for set routing and middleware
