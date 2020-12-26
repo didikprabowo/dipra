@@ -121,3 +121,15 @@ func TestParam(t *testing.T) {
 	assert.Equal(t, "/user/OK/Created", c.GetPath())
 	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
 }
+
+func TestQuery(t *testing.T) {
+	d := Default()
+	req := httptest.NewRequest(http.MethodGet, "/?name=didik", strings.NewReader(pdataStr))
+	response := httptest.NewRecorder()
+
+	c := d.InitialContext(response, req)
+
+	c.String(http.StatusOK, c.Query("name"))
+	assert.Equal(t, "didik", response.Body.String())
+	assert.Equal(t, http.StatusOK, response.Result().StatusCode)
+}
