@@ -83,7 +83,13 @@ func (e *Node) ReserverURI() (out string, err error) {
 
 	e.Fullpatch = newURI
 
-	return strings.Join(newURI, "/"), err
+	path := strings.Join(newURI, "/")
+	pacher := e.Route.Path
+
+	e.Ctx.SetPath("/" + path)
+	e.Ctx.SetPatcher(pacher)
+
+	return path, err
 }
 
 // CleanPath ...

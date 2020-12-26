@@ -30,6 +30,10 @@ type (
 		Engine *Engine
 		// Writen ResponseWriter
 		Writen ResponseWriter
+		// Path is URL
+		Path string
+		// Patcher is URL Route
+		Patcher string
 	}
 	// AccessControll ...
 	AccessControll string
@@ -151,6 +155,26 @@ func (c *Context) Param(param string) string {
 	return c.Params.Param(param)
 }
 
+// SetPath URL
+func (c *Context) SetPath(p string) {
+	c.Path = p
+}
+
+// GetPath URL
+func (c *Context) GetPath() string {
+	return c.Path
+}
+
+// SetPatcher Curwl
+func (c *Context) SetPatcher(p string) {
+	c.Patcher = p
+}
+
+// GetPatcher Curwl
+func (c *Context) GetPatcher() string {
+	return c.Patcher
+}
+
 // GetQuery By param
 func (c *Context) GetQuery(param string, DefaultQuery string) string {
 	q := c.URL.Query()
@@ -201,6 +225,12 @@ func (c *Context) String(code int, body string) (err error) {
 	if reflect.ValueOf(body).Kind() != reflect.String {
 		return http.ErrNotSupported
 	}
+
+	p := map[string]string{
+		string(HeaderContentType): string(MIMETextPlain),
+	}
+	c.Writen.WriteHeader(p)
+
 	c.Writen.WriteStatus(code)
 	c.Writen.Write([]byte(body))
 	return err
@@ -209,9 +239,9 @@ func (c *Context) String(code int, body string) (err error) {
 // XML response
 func (c *Context) XML(code int, body interface{}) (err error) {
 
-	xml, err := xml.MarshalIndent(body, " ", "  ")
+	xml, err := xml.MarshalIndent(body, "", "")
 	if err != nil {
-		defaulterrorHTTP(c.ResponseWriter, http.StatusInternalServerError, err)
+		return err
 	}
 	p := map[string]string{
 		string(HeaderContentType): string(MIMEApplicationXML),
