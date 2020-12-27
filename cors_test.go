@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	. "github.com/didikprabowo/dipra"
-	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,7 +23,7 @@ func TestCorsOrigin(t *testing.T) {
 
 			ctx := d.InitialContext(resp, req)
 			h(ctx)
-			assert.Equal(t, "*", resp.Header().Get(echo.HeaderAccessControlAllowOrigin))
+			assert.Equal(t, "*", resp.Header().Get(string(AccessControllOrigin)))
 		})
 
 		t.Run("allow-localhost", func(t *testing.T) {
@@ -39,7 +38,7 @@ func TestCorsOrigin(t *testing.T) {
 
 			ctx := d.InitialContext(resp, req)
 			h(ctx)
-			assert.Equal(t, "localhost", resp.Header().Get(echo.HeaderAccessControlAllowOrigin))
+			assert.Equal(t, "localhost", resp.Header().Get(string(AccessControllOrigin)))
 		})
 	})
 }
