@@ -223,7 +223,7 @@ func (e *Engine) HandlerError(err error, c *Context) {
 	)
 
 	eStr, ok := err.(*WrapError)
-	if !ok {
+	if !ok || !e.IsDebug {
 		r["code"] = http.StatusInternalServerError
 		r["message"] = err.Error()
 	} else {
