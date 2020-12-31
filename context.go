@@ -9,13 +9,12 @@ import (
 	"strings"
 )
 
-// Iface be able used
-
 type (
-	// Header ...
 	Header string
-	// MimeType ...
+
 	MimeType string
+
+	AccessControll string
 	// Context ...
 	Context struct {
 		// http.ResponseWriter
@@ -35,48 +34,27 @@ type (
 		// Patcher is URL Route
 		Patcher string
 	}
-	// AccessControll ...
-	AccessControll string
 )
 
 const (
-	// HeaderAccept ...
-	HeaderAccept Header = "Accept"
-	// HeaderAcceptEncoding ...
-	HeaderAcceptEncoding Header = "Accept-Encoding"
-	// HeaderAllow Allow
-	HeaderAllow Header = "Allow"
-	// HeaderAuthorization ...
-	HeaderAuthorization Header = "Authorization"
-	// HeaderContentDisposition  ...
-	HeaderContentDisposition Header = "Content-Disposition"
-	// HeaderContentEncoding ...
-	HeaderContentEncoding Header = "Content-Encoding"
-	// HeaderContentLength ...
-	HeaderContentLength Header = "Content-Length"
-	// HeaderContentType ...
-	HeaderContentType Header = "Content-Type"
-	// HeaderCookie ...
-	HeaderCookie Header = "Cookie"
-	// HeaderSetCookie ...
-	HeaderSetCookie Header = "Set-Cookie"
-	// HeaderIfModifiedSince ...
-	HeaderIfModifiedSince Header = "If-Modified-Since"
-	// HeaderLastModified ...
-	HeaderLastModified Header = "Last-Modified"
-	// HeaderLocation ...
-	HeaderLocation Header = "Location"
-	// HeaderUpgrade ...
-	HeaderUpgrade Header = "Upgrade"
-	// HeaderVary ...
-	HeaderVary Header = "Vary"
-	// HeaderWWWAuthenticate ...
-	HeaderWWWAuthenticate Header = "WWW-Authenticate"
-	// HeaderXForwardedFor ...
-	HeaderXForwardedFor Header = "X-Forwarded-For"
-	// HeaderXForwardedProto ...
-	HeaderXForwardedProto Header = "X-Forwarded-Proto"
-	// HeaderXForwardedProtocol ...
+	HeaderAccept              Header = "Accept"
+	HeaderAcceptEncoding      Header = "Accept-Encoding"
+	HeaderAllow               Header = "Allow"
+	HeaderAuthorization       Header = "Authorization"
+	HeaderContentDisposition  Header = "Content-Disposition"
+	HeaderContentEncoding     Header = "Content-Encoding"
+	HeaderContentLength       Header = "Content-Length"
+	HeaderContentType         Header = "Content-Type"
+	HeaderCookie              Header = "Cookie"
+	HeaderSetCookie           Header = "Set-Cookie"
+	HeaderIfModifiedSince     Header = "If-Modified-Since"
+	HeaderLastModified        Header = "Last-Modified"
+	HeaderLocation            Header = "Location"
+	HeaderUpgrade             Header = "Upgrade"
+	HeaderVary                Header = "Vary"
+	HeaderWWWAuthenticate     Header = "WWW-Authenticate"
+	HeaderXForwardedFor       Header = "X-Forwarded-For"
+	HeaderXForwardedProto     Header = "X-Forwarded-Proto"
 	HeaderXForwardedProtocol  Header = "X-Forwarded-Protocol"
 	HeaderXForwardedSsl       Header = "X-Forwarded-Ssl"
 	HeaderXUrlScheme          Header = "X-Url-Scheme"
@@ -88,48 +66,28 @@ const (
 	HeaderOrigin              Header = "Origin"
 	HeaderStatus              Header = "Status"
 
-	// MIMEApplicationJSON ...
-	MIMEApplicationJSON MimeType = "application/json"
-	// MIMEApplicationJavaScript ...
+	MIMEApplicationJSON       MimeType = "application/json"
 	MIMEApplicationJavaScript MimeType = "application/javascript"
-	// MIMEApplicationXML ...
-	MIMEApplicationXML MimeType = "application/xml"
-	// MIMETextXML ...
-	MIMETextXML MimeType = "text/xml"
-	// MIMEApplicationForm ...
-	MIMEApplicationForm MimeType = "application/x-www-form-urlencoded"
-	// MIMEApplicationProtobuf ...
-	MIMEApplicationProtobuf MimeType = "application/protobuf"
-	// MIMEApplicationMsgpack ...
-	MIMEApplicationMsgpack MimeType = "application/msgpack"
-	// MIMETextHTML ...
-	MIMETextHTML MimeType = "text/html"
-	// MIMEApplicationYAML ...
-	MIMEApplicationYAML MimeType = "application/x-yaml"
-	// MIMETextYAML ...
-	MIMETextYAML MimeType = "text/yaml"
-	// MIMETextPlain ...
-	MIMETextPlain MimeType = "text/plain"
-	// MIMEMultipartForm ...
-	MIMEMultipartForm MimeType = "multipart/form-data"
-	// MIMEOctetStream ...
-	MIMEOctetStream MimeType = "application/octet-stream"
-	// AccessControllOrigin ...
-	AccessControllOrigin AccessControll = "Access-Control-Allow-Origin"
-	// ACcessControllMethod ...
-	ACcessControllMethod AccessControll = "Access-Control-Allow-Methods"
-	// ACcessControllHeaders ...
-	ACcessControllHeaders AccessControll = "Access-Control-Allow-Headers"
-	// AccessControllCredential ...
-	AccessControllCredential AccessControll = "Access-Control-Allow-Credentials"
-	// AccessControllMaxAge ...
-	AccessControllMaxAge AccessControll = "Access-Control-Max-Age"
-	// AccessControllExposeHeaders ...
+	MIMEApplicationXML        MimeType = "application/xml"
+	MIMETextXML               MimeType = "text/xml"
+	MIMEApplicationForm       MimeType = "application/x-www-form-urlencoded"
+	MIMEApplicationProtobuf   MimeType = "application/protobuf"
+	MIMEApplicationMsgpack    MimeType = "application/msgpack"
+	MIMETextHTML              MimeType = "text/html"
+	MIMEApplicationYAML       MimeType = "application/x-yaml"
+	MIMETextYAML              MimeType = "text/yaml"
+	MIMETextPlain             MimeType = "text/plain"
+	MIMEMultipartForm         MimeType = "multipart/form-data"
+	MIMEOctetStream           MimeType = "application/octet-stream"
+
+	AccessControllOrigin        AccessControll = "Access-Control-Allow-Origin"
+	ACcessControllMethod        AccessControll = "Access-Control-Allow-Methods"
+	ACcessControllHeaders       AccessControll = "Access-Control-Allow-Headers"
+	AccessControllCredential    AccessControll = "Access-Control-Allow-Credentials"
+	AccessControllMaxAge        AccessControll = "Access-Control-Max-Age"
 	AccessControllExposeHeaders AccessControll = "Access-Control-Expose-Headers"
-	// AccessControllReqMethod ...
-	AccessControllReqMethod AccessControll = "Access-Control-Request-Method"
-	// AccessControllReqHeaders ...
-	AccessControllReqHeaders AccessControll = "Access-Control-Request-Headers"
+	AccessControllReqMethod     AccessControll = "Access-Control-Request-Method"
+	AccessControllReqHeaders    AccessControll = "Access-Control-Request-Headers"
 )
 
 // Reset Context and response

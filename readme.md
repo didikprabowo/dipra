@@ -31,6 +31,7 @@ Welcome to dipra. Dipra is mini framework golang to build service application. D
  - [Middleware](#Middleware)
    - [Logger](#logger)
    - [Cors](#cors) 
+   - [Recovery](#recovery) 
    - [Create Middleware](#Create-Middleware)
 
 
@@ -317,6 +318,35 @@ route.GET("/", func(c *dipra.Context) error {
                 "data": "Example cors",
         })
 })
+```
+
+#### Recovery
+
+It's for handle error panic, you can use this middleware for handle it.
+Please instance middleware `recovery` for used it. For example :
+
+``main.go``
+```go
+
+package main
+
+import (
+	"github.com/didikprabowo/dipra"
+)
+
+func main() {
+	r := dipra.Default()
+	r.Use(dipra.Recovery())
+	r.GET("/", func(c *dipra.Context) error {
+		panic("Error panic")
+	})
+
+	err := r.Run(":9020")
+	if err != nil {
+		panic(err)
+	}
+}
+
 ```
 
 #### Create Middleware
