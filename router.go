@@ -29,13 +29,13 @@ func (e *Engine) allowMethods(m string) (ok bool) {
 	return ok
 }
 
+func (e *Engine) cleanPath(p string) string {
+	return strings.ReplaceAll(p, "/", "")
+}
+
 // allowPath for use check your path
 func (e *Engine) allowPath(p string) (ok bool) {
-
-	if strings.HasPrefix(p, "/") {
-		p = p[1 : len(p)-1]
-	}
-
+	p = e.cleanPath(p)
 	isAllow := regexp.MustCompile(`[a-zA-Z0-9]$`)
 	ok = isAllow.MatchString(p)
 
