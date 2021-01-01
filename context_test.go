@@ -111,7 +111,7 @@ func TestParam(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/user/OK/Created", strings.NewReader(pdataStr))
 	response := httptest.NewRecorder()
 
-	d.AddToObjectEngine("/user/:name/:status", http.MethodGet, nil)
+	d.AddRoute("/user/:name/:status", http.MethodGet, nil)
 	c := d.InitialContext(response, req)
 	d.HandlerRoute(c)
 

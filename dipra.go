@@ -105,7 +105,7 @@ func (e *Engine) Debug(debug bool) {
 	e.IsDebug = debug
 }
 
-// InitialContext ...
+// InitialContext to define
 func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context {
 	c := &Context{
 		ResponseWriter: w,
@@ -121,10 +121,19 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 	return c
 }
 
-// AddToObjectEngine is used for set routing and middleware
-func (e *Engine) AddToObjectEngine(path, method string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+// AddRoute is used for set routing(path,mehtod, handle),
+// By besides be able to set middleware
+func (e *Engine) AddRoute(path, method string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+
+	if exist := e.findRouter(method, path, handler); !exist {
+		e.Route = append(e.Route,
+			Route{Path: e.Prefix + path,
+				Method:  method,
+				Handler: handler,
+			})
+	}
+
 	e.HandleMiddleware = append(e.HandleMiddleware, middleware...)
-	e.Route = append(e.Route, Route{Path: e.Prefix + path, Method: method, Handler: handler})
 }
 
 // Use is used for add handlefuncs
@@ -141,42 +150,42 @@ func (e *Engine) Group(group string, m ...MiddlewareFunc) *Engine {
 
 // GET is used HTTP Request with GET METHOD
 func (e *Engine) GET(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddToObjectEngine(path, http.MethodGet, handler, middleware...)
+	e.AddRoute(path, http.MethodGet, handler, middleware...)
 }
 
 // POST is used HTTP Request with POST METHOD
 func (e *Engine) POST(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddToObjectEngine(path, http.MethodPost, handler, middleware...)
+	e.AddRoute(path, http.MethodPost, handler, middleware...)
 }
 
 // PUT is used HTTP Request with PUT METHOD
 func (e *Engine) PUT(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddToObjectEngine(path, http.MethodPut, handler, middleware...)
+	e.AddRoute(path, http.MethodPut, handler, middleware...)
 }
 
 // PATCH is used HTTP Request with PATCH METHOD
 func (e *Engine) PATCH(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddToObjectEngine(path, http.MethodPatch, handler, middleware...)
+	e.AddRoute(path, http.MethodPatch, handler, middleware...)
 }
 
 // DELETE is used HTTP Request with DELETE METHOD
 func (e *Engine) DELETE(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddToObjectEngine(path, http.MethodDelete, handler, middleware...)
+	e.AddRoute(path, http.MethodDelete, handler, middleware...)
 }
 
 // OPTION is used HTTP Request with OPTION METHOD
 func (e *Engine) OPTION(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddToObjectEngine(path, http.MethodOptions, handler, middleware...)
+	e.AddRoute(path, http.MethodOptions, handler, middleware...)
 }
 
 // TRACE is used HTTP Request with TRACE METHOD
 func (e *Engine) TRACE(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddToObjectEngine(path, http.MethodTrace, handler, middleware...)
+	e.AddRoute(path, http.MethodTrace, handler, middleware...)
 }
 
 // CONNECT is used HTTP Request with CONNECT METHOD
 func (e *Engine) CONNECT(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddToObjectEngine(path, http.MethodConnect, handler, middleware...)
+	e.AddRoute(path, http.MethodConnect, handler, middleware...)
 }
 
 // Static is used define http to get file type
@@ -192,7 +201,7 @@ func (e *Engine) Static(prefix, root string) {
 		return c.File(name)
 	}
 
-	e.AddToObjectEngine(prefix+"/*", http.MethodGet, cp)
+	e.AddRoute(prefix+"/*", http.MethodGet, cp)
 }
 
 // defaulterrorHttp is used set error default
@@ -247,12 +256,14 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if e.HandleMiddleware != nil {
-		rt.Handler = e.WrapMiddleware(rt.Handler)
+		rt.Handler = e.addMiddleware(rt.Handler)
 	}
 
 	if err := rt.Handler(ctx); err != nil {
 		e.HandlerError(err, ctx)
 	}
+
+	e.Pool.Put(ctx)
 }
 
 // HandlerRoute is used running context http
@@ -285,7 +296,7 @@ func (e *Engine) HandlerRoute(c *Context) (r Route, werrx *WrapError) {
 }
 
 // WrapMiddleware is used wrapping with returns HandlerFunc
-func (e *Engine) WrapMiddleware(h HandlerFunc) HandlerFunc {
+func (e *Engine) addMiddleware(h HandlerFunc) HandlerFunc {
 	for i := len(e.HandleMiddleware) - 1; i >= 0; i-- {
 		if e.HandleMiddleware[i](h) != nil {
 			h = e.HandleMiddleware[i](h)
