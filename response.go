@@ -10,7 +10,7 @@ type (
 	// ResponseWriter ...
 	ResponseWriter struct {
 		Response   http.ResponseWriter
-		statusCode int
+		StatusCode int
 		Header     Header
 	}
 )
@@ -34,7 +34,7 @@ func (rsp *ResponseWriter) WriteHeader(v map[string]string) {
 
 // WriteStatus Status Code
 func (rsp *ResponseWriter) WriteStatus(status int) {
-	rsp.statusCode = status
+	rsp.StatusCode = status
 	rsp.Response.WriteHeader(status)
 }
 

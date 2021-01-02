@@ -1,4 +1,4 @@
-package dipra
+package middleware
 
 import (
 	"bytes"
@@ -8,27 +8,8 @@ import (
 	"os"
 	"sync"
 	"time"
-)
 
-const (
-	// Reset color
-	Reset = "\033[0m"
-	// Red color
-	Red = "\033[31m"
-	// Green color
-	Green = "\033[32m"
-	// Yellow color
-	Yellow = "\033[33m"
-	// Blue color
-	Blue = "\033[34m"
-	// Purple color
-	Purple = "\033[35m"
-	// Cyan color
-	Cyan = "\033[36m"
-	// Gray color
-	Gray = "\033[37m"
-	// White color
-	White = "\033[97m"
+	"github.com/didikprabowo/dipra"
 )
 
 type (
@@ -61,9 +42,9 @@ func DefaultLoggerConfig() LoggerConfig {
 }
 
 // Logger is used instance log
-func Logger() MiddlewareFunc {
-	return func(h HandlerFunc) HandlerFunc {
-		return func(c *Context) (err error) {
+func Logger() dipra.MiddlewareFunc {
+	return func(h dipra.HandlerFunc) dipra.HandlerFunc {
+		return func(c *dipra.Context) (err error) {
 
 			l := DefaultLoggerConfig()
 			l.Request = c.GetRequest()
@@ -76,7 +57,7 @@ func Logger() MiddlewareFunc {
 
 			end := time.Now()
 			l.Latency = end.Sub(start)
-			l.StatusCode = c.Writen.statusCode
+			l.StatusCode = c.Writen.StatusCode
 			l.Pool = &sync.Pool{
 				New: func() interface{} {
 					return bytes.NewBuffer(make([]byte, 256))
@@ -97,14 +78,25 @@ func (l LoggerConfig) BuildLogger() {
 
 	out := fmt.Sprintf(
 		" [DIPRA] %s%s%s => %s%s%s | %s%d%s | %s\"%s %s\" |%s %s%s %s",
-		White, time.Now().Format("02/01/2006 15:04:05"), Reset,
-		l.GetColor(), l.Request.Method, Reset,
-		l.GetColorStatusCode(l.StatusCode), l.StatusCode, Reset,
-		Cyan, l.Request.Host, l.Request.URL, Reset,
-		Green, l.Latency, Reset,
+		dipra.White,
+		time.Now().Format("02/01/2006 15:04:05"),
+		dipra.Reset,
+		l.GetColor(),
+		l.Request.Method,
+		dipra.Reset,
+		l.GetColorStatusCode(l.StatusCode),
+		l.StatusCode,
+		dipra.Reset,
+		dipra.Cyan,
+		l.Request.Host,
+		l.Request.URL,
+		dipra.Reset,
+		dipra.Green,
+		l.Latency,
+		dipra.Reset,
 	)
 	if l.Err != "" {
-		out += fmt.Sprintf("| %s%v%s", Red, l.Err, Reset)
+		out += fmt.Sprintf("| %s%v%s", dipra.Red, l.Err, dipra.Reset)
 	}
 
 	buf.WriteString(out + "\n")
@@ -116,19 +108,19 @@ func (l LoggerConfig) BuildLogger() {
 func (l *LoggerConfig) GetColor() string {
 	switch l.Request.Method {
 	case http.MethodGet:
-		return Green
+		return dipra.Green
 	case http.MethodPost:
-		return Blue
+		return dipra.Blue
 	case http.MethodDelete:
-		return Red
+		return dipra.Red
 	case http.MethodPut:
-		return Cyan
+		return dipra.Cyan
 	case http.MethodPatch:
-		return Purple
+		return dipra.Purple
 	case http.MethodOptions:
-		return Yellow
+		return dipra.Yellow
 	default:
-		return White
+		return dipra.White
 	}
 }
 
@@ -136,12 +128,12 @@ func (l *LoggerConfig) GetColor() string {
 func (l *LoggerConfig) GetColorStatusCode(code int) string {
 	switch {
 	case code >= http.StatusOK && code < http.StatusMultipleChoices:
-		return Green
+		return dipra.Green
 	case code >= http.StatusMultipleChoices && code < http.StatusBadRequest:
-		return White
+		return dipra.White
 	case code >= http.StatusBadRequest && code < http.StatusInternalServerError:
-		return Yellow
+		return dipra.Yellow
 	default:
-		return Red
+		return dipra.Red
 	}
 }

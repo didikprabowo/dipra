@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/didikprabowo/dipra"
+	"github.com/didikprabowo/dipra/middleware"
 )
 
 type (
@@ -17,13 +17,13 @@ type (
 func main() {
 
 	route := dipra.Default()
-	route.Use(dipra.CorsWithConifg(dipra.CORSConfig{
+	route.Use(middleware.CorsWithConifg(middleware.CORSConfig{
 		AllowOrigins: []string{"https://www.google.com"},
 		AllowMethod:  []string{"*"},
 		AllowHeaders: []string{"*"},
 	}))
 	route.GET("/", func(c *dipra.Context) error {
-		fmt.Println(c.GetRequest().Header)
+
 		data := []Personal{
 			Personal{
 				Name:    "Didik",
@@ -42,5 +42,5 @@ func main() {
 			},
 		})
 	})
-	route.Run(":9090")
+	route.Run(":9020")
 }

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/didikprabowo/dipra/middleware"
 )
 
 // BenchmarkSingleRoute ...
@@ -19,7 +21,7 @@ func BenchmarkSingleRoute(b *testing.B) {
 // BenchmarkCors ...
 func BenchmarkCors(b *testing.B) {
 	e := Default()
-	e.Use(CORS())
+	e.Use(middleware.CORS())
 	e.GET("/", func(c *Context) error {
 		return nil
 	})

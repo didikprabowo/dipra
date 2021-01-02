@@ -36,6 +36,11 @@ func (e *Engine) cleanPath(p string) string {
 // allowPath for use check your path
 func (e *Engine) allowPath(p string) (ok bool) {
 	p = e.cleanPath(p)
+
+	if p == "" {
+		return true
+	}
+
 	isAllow := regexp.MustCompile(`[a-zA-Z0-9]$`)
 	ok = isAllow.MatchString(p)
 

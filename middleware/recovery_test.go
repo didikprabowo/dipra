@@ -1,4 +1,4 @@
-package dipra_test
+package middleware_test
 
 import (
 	"encoding/json"
@@ -6,16 +6,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	. "github.com/didikprabowo/dipra"
+	"github.com/didikprabowo/dipra"
+	. "github.com/didikprabowo/dipra/middleware"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRecovery(t *testing.T) {
-	d := Default()
+	d := dipra.Default()
 
 	d.Use(Recovery())
 
-	d.GET("/tes_panic", func(c *Context) error {
+	d.GET("/tes_panic", func(c *dipra.Context) error {
 		panic("tes panic")
 	})
 	req := httptest.NewRequest(http.MethodGet, "/tes_panic", nil)
@@ -23,7 +24,7 @@ func TestRecovery(t *testing.T) {
 	d.ServeHTTP(w, req)
 
 	err := struct {
-		Err WrapError `json:"error"`
+		Err dipra.WrapError `json:"error"`
 	}{}
 
 	json.Unmarshal(w.Body.Bytes(), &err)

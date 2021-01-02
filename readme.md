@@ -291,8 +291,18 @@ Dipra provide middleware handle for handler function. For example you can print 
 
 #### Logger
 ```go
+
+package main
+
+import (
+	"net/http"
+
+	"github.com/didikprabowo/dipra"
+	"github.com/didikprabowo/dipra/middleware"
+)
+
 route := dipra.Default()
-route.Use(dipra.Logger())
+route.Use(middleware.Logger())
 route.GET("/", func(c *dipra.Context) error {
 
         return c.JSON(http.StatusOK, dipra.M{
@@ -305,9 +315,18 @@ route.GET("/", func(c *dipra.Context) error {
 
 ```go
 
+package main
+
+import (
+	"net/http"
+
+	"github.com/didikprabowo/dipra"
+	"github.com/didikprabowo/dipra/middleware"
+)
+
 route := dipra.Default()
 // default :: route.Use(dipra.CORS())
-route.Use(dipra.CorsWithConifg(dipra.CORSConfig{
+route.Use(middleware.CorsWithConifg(middleware.CORSConfig{
         AllowOrigins: []string{"https://www.google.com"},
         AllowMethod:  []string{"*"},
         AllowHeaders: []string{"*"},
@@ -331,12 +350,13 @@ Please instance middleware `recovery` for used it. For example :
 package main
 
 import (
-	"github.com/didikprabowo/dipra"
+        "github.com/didikprabowo/dipra"
+        "github.com/didikprabowo/dipra/middleware"
 )
 
 func main() {
 	r := dipra.Default()
-	r.Use(dipra.Recovery())
+	r.Use(middleware.Recovery())
 	r.GET("/", func(c *dipra.Context) error {
 		panic("Error panic")
 	})
