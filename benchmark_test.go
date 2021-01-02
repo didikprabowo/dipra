@@ -1,11 +1,11 @@
-package dipra
+package dipra_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/didikprabowo/dipra/middleware"
+	. "github.com/didikprabowo/dipra"
 )
 
 // BenchmarkSingleRoute ...
@@ -18,15 +18,6 @@ func BenchmarkSingleRoute(b *testing.B) {
 	RunningRequest(b, http.MethodGet, "/", e)
 }
 
-// BenchmarkCors ...
-func BenchmarkCors(b *testing.B) {
-	e := Default()
-	e.Use(middleware.CORS())
-	e.GET("/", func(c *Context) error {
-		return nil
-	})
-	RunningRequest(b, http.MethodGet, "/", e)
-}
 
 func BenchmarkMiddlewareHandler(b *testing.B) {
 	e := Default()
@@ -39,16 +30,6 @@ func BenchmarkMiddlewareHandler(b *testing.B) {
 		}
 	})
 
-	RunningRequest(b, http.MethodGet, "/", e)
-}
-
-// BenchmarkLoggerMiddleware ...
-func BenchmarkLoggerMiddleware(b *testing.B) {
-	e := Default()
-	e.Use(Logger())
-	e.GET("/", func(c *Context) error {
-		return nil
-	})
 	RunningRequest(b, http.MethodGet, "/", e)
 }
 

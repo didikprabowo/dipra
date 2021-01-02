@@ -245,7 +245,7 @@ func (e *Engine) HandlerError(err error, c *Context) {
 		r["message"] = eStr.Message.(string)
 	}
 
-	err = c.JSON(200, M{
+	err = c.JSON(r["code"].(int), M{
 		"error": r,
 	})
 }
