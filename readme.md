@@ -1,4 +1,4 @@
-# Dipra mini framework golang
+# Dipra Mini Framework
 
 ![Logo dipra](https://repository-images.githubusercontent.com/296819126/41e65c00-4db4-11eb-84b3-b66bb9e2cc94)
 
