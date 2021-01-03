@@ -1,6 +1,6 @@
 # Dipra mini framework golang
 
-![Logo dipra](https://repository-images.githubusercontent.com/296819126/28dcab80-4db2-11eb-87bd-c3f804214e17)
+![Logo dipra](https://repository-images.githubusercontent.com/296819126/41e65c00-4db4-11eb-84b3-b66bb9e2cc94)
 
 
 [![Build Status](https://img.shields.io/travis/com/didikprabowo/dipra/master?label=Build&logo=travis)](https://travis-ci.com/github/didikprabowo/dipra)
