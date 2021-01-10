@@ -1,10 +1,12 @@
-package dipra
+package middleware
 
 import (
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/didikprabowo/dipra"
 )
 
 type (
@@ -44,19 +46,19 @@ func DefaultConfig() CORSConfig {
 }
 
 // CORS use Cors
-func CORS() MiddlewareFunc {
+func CORS() dipra.MiddlewareFunc {
 	return BuildCors(DefaultConfig())
 }
 
 // CorsWithConifg is used setting cors
-func CorsWithConifg(l CORSConfig) MiddlewareFunc {
+func CorsWithConifg(l CORSConfig) dipra.MiddlewareFunc {
 	return BuildCors(l)
 }
 
 // BuildCors for used build cors
-func BuildCors(cors CORSConfig) MiddlewareFunc {
-	return func(h HandlerFunc) HandlerFunc {
-		return func(c *Context) (err error) {
+func BuildCors(cors CORSConfig) dipra.MiddlewareFunc {
+	return func(h dipra.HandlerFunc) dipra.HandlerFunc {
+		return func(c *dipra.Context) (err error) {
 			methods := cors.SetCorsMethod()
 			origings := cors.SetCorsOrigin()
 			headers := cors.SetCorsHeader()
@@ -65,14 +67,14 @@ func BuildCors(cors CORSConfig) MiddlewareFunc {
 			expose := cors.SetCorsExpose()
 
 			res := c.GetResponse()
-			res.Header().Add(string(HeaderVary), string(AccessControllReqHeaders))
-			res.Header().Add(string(HeaderVary), string(AccessControllReqMethod))
-			res.Header().Set(string(ACcessControllHeaders), headers)
-			res.Header().Set(string(ACcessControllMethod), methods)
-			res.Header().Set(string(AccessControllOrigin), origings)
-			res.Header().Set(string(AccessControllMaxAge), age)
-			res.Header().Set(string(AccessControllCredential), credential)
-			res.Header().Set(string(AccessControllExposeHeaders), expose)
+			res.Header().Add(string(dipra.HeaderVary), string(dipra.AccessControllReqHeaders))
+			res.Header().Add(string(dipra.HeaderVary), string(dipra.AccessControllReqMethod))
+			res.Header().Set(string(dipra.ACcessControllHeaders), headers)
+			res.Header().Set(string(dipra.ACcessControllMethod), methods)
+			res.Header().Set(string(dipra.AccessControllOrigin), origings)
+			res.Header().Set(string(dipra.AccessControllMaxAge), age)
+			res.Header().Set(string(dipra.AccessControllCredential), credential)
+			res.Header().Set(string(dipra.AccessControllExposeHeaders), expose)
 			h(c)
 			return err
 		}

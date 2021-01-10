@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	version = `v1.0.3`
+	version = `v1.0.6`
 	welcome = `
  Welcome to :
  ______  _                    
@@ -112,7 +112,7 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 		Request:        r,
 		Writen: ResponseWriter{
 			Response:   w,
-			statusCode: http.StatusOK,
+			StatusCode: http.StatusOK,
 		},
 		Params:  Param{},
 		Binding: Binding{Request: r},
@@ -228,11 +228,16 @@ func defaultErrorHandler(c HandlerFunc, werrx *WrapError) HandlerFunc {
 func (e *Engine) HandlerError(err error, c *Context) {
 
 	var (
-		r = M{}
+		r          = M{}
+		debug bool = true
 	)
 
+	if e != nil {
+		debug = e.IsDebug
+	}
+
 	eStr, ok := err.(*WrapError)
-	if !ok || !e.IsDebug {
+	if !ok || !debug {
 		r["code"] = http.StatusInternalServerError
 		r["message"] = err.Error()
 	} else {

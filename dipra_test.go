@@ -149,6 +149,7 @@ func TestHandlerError(t *testing.T) {
 				ht := httptest.NewRequest(http.MethodGet, "/test-handler-error", nil)
 				rec := httptest.NewRecorder()
 				e.ServeHTTP(rec, ht)
+				
 				assert.Equal(t, http.StatusInternalServerError, rec.Code)
 				assert.Equal(t, rec.Body.String(), "{\"error\":{\"code\":500,\"message\":\"test-handler-error\"}}")
 			}

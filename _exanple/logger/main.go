@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/didikprabowo/dipra"
+	"github.com/didikprabowo/dipra/middleware"
 )
 
 type (
@@ -16,12 +17,12 @@ type (
 func main() {
 
 	route := dipra.Default()
-	route.Use(dipra.Logger())
+	route.Use(middleware.Logger())
 	route.GET("/", func(c *dipra.Context) error {
 
 		return c.JSON(http.StatusOK, dipra.M{
 			"status": true,
 		})
 	})
-	route.Run(":9000")
+	route.Run(":9020")
 }

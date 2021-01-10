@@ -1,14 +1,16 @@
-package dipra
+package middleware
 
 import (
 	"fmt"
 	"log"
 	"runtime"
+
+	"github.com/didikprabowo/dipra"
 )
 
-func Recovery() MiddlewareFunc {
-	return func(next HandlerFunc) HandlerFunc {
-		return func(c *Context) (err error) {
+func Recovery() dipra.MiddlewareFunc {
+	return func(next dipra.HandlerFunc) dipra.HandlerFunc {
+		return func(c *dipra.Context) (err error) {
 			defer func() {
 				if errS := recover(); errS != nil {
 					err, ok := errS.(error)

@@ -2,11 +2,12 @@ package main
 
 import (
 	"github.com/didikprabowo/dipra"
+	"github.com/didikprabowo/dipra/middleware"
 )
 
 func main() {
 	r := dipra.Default()
-	r.Use(dipra.Recovery())
+	r.Use(middleware.Recovery())
 	r.GET("/", func(c *dipra.Context) error {
 		panic("Error panic")
 	})
