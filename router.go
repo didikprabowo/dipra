@@ -41,7 +41,7 @@ func (e *Engine) allowPath(p string) (ok bool) {
 		return true
 	}
 
-	isAllow := regexp.MustCompile(`[a-zA-Z0-9]$`)
+	isAllow := regexp.MustCompile(`[a-zA-Z0-9*]$`)
 	ok = isAllow.MatchString(p)
 
 	return ok
@@ -67,17 +67,11 @@ func (e *Engine) findRouter(m, p string, h HandlerFunc) (exist bool) {
 		return strings.ToLower(s)
 	}
 
-	for i := range e.getRoutes() {
-		if toLower(e.Route[i].Method) == toLower(m) &&
-			toLower(e.Route[i].Path) == toLower(p) {
-			e.Route[i].Handler = h
+	for _, v := range e.Route[m] {
+		if toLower(v.Path) == toLower(p) {
 			return true
 		}
 	}
-	return exist
-}
 
-// getRoutes for get The routes you define
-func (e *Engine) getRoutes() []Route {
-	return e.Route
+	return exist
 }

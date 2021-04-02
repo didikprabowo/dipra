@@ -2,10 +2,10 @@ package dipra
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path"
-	"sort"
 	"strings"
 	"sync"
 )
@@ -23,6 +23,20 @@ var (
  	| |                
  	|_|  %v             										  	
  Mini framework for build microservice, High speed and small size`
+
+	defaultHandler = func(c *Context) error {
+		return c.JSON(http.StatusOK, M{
+			"version":     version,
+			"message":     "Welcome to dipra, have fun",
+			"code":        http.StatusOK,
+			"quick_start": "https://github.com/didikprabowo/dipra#Installation",
+			"language":    "GO(Golang)",
+			"author": M{
+				"name":   "Didik Prabowo",
+				"github": "https://github.com/didikprabowo",
+			},
+		})
+	}
 )
 
 type (
@@ -39,7 +53,7 @@ type (
 		Prefix string
 
 		// Route
-		Route []Route
+		Route map[string][]Route
 
 		// MiddlewareFunc func
 		HandleMiddleware []MiddlewareFunc
@@ -73,30 +87,14 @@ const (
 // Default Engine
 func Default() *Engine {
 	e := &Engine{
-		Route: []Route{},
-		Node:  Node{},
+		Route:   map[string][]Route{},
+		Node:    Node{},
+		IsDebug: true,
 	}
 	e.Pool.New = func() interface{} {
 		return e.InitialContext(nil, nil)
 	}
-	e.Route = append(e.Route, Route{
-		Path:   "/",
-		Method: http.MethodGet,
-		Handler: func(c *Context) error {
-			return c.JSON(http.StatusOK, M{
-				"version":     version,
-				"message":     "Welcome to dipra, have fun",
-				"code":        http.StatusOK,
-				"quick_start": "https://github.com/didikprabowo/dipra#Installation",
-				"language":    "GO(Golang)",
-				"author": M{
-					"name":   "Didik Prabowo",
-					"github": "https://github.com/didikprabowo",
-				},
-			})
-		},
-	})
-	e.IsDebug = true
+
 	return e
 }
 
@@ -125,12 +123,16 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 // By besides be able to set middleware
 func (e *Engine) AddRoute(path, method string, handler HandlerFunc, middleware ...MiddlewareFunc) {
 
-	if exist := e.findRouter(method, path, handler); !exist {
-		e.Route = append(e.Route,
-			Route{Path: e.Prefix + path,
-				Method:  method,
-				Handler: handler,
-			})
+	ok := e.findRouter(method, path, handler)
+	if !ok {
+		e.Route[method] = append(e.Route[method], Route{
+			Path:    e.Prefix + path,
+			Method:  method,
+			Handler: handler,
+		})
+	} else {
+		log.Printf(fmt.Sprintf("path %s %s already exist, please use another path", path, method))
+		os.Exit(1)
 	}
 
 	e.HandleMiddleware = append(e.HandleMiddleware, middleware...)
@@ -186,6 +188,13 @@ func (e *Engine) TRACE(path string, handler HandlerFunc, middleware ...Middlewar
 // CONNECT is used HTTP Request with CONNECT METHOD
 func (e *Engine) CONNECT(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
 	e.AddRoute(path, http.MethodConnect, handler, middleware...)
+}
+
+// Any is used request with all method
+func (e *Engine) Any(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	for _, m := range allowMethod {
+		e.AddRoute(path, m, handler, middleware...)
+	}
 }
 
 // Static is used define http to get file type
@@ -255,6 +264,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := e.Pool.Get().(*Context)
 	ctx.Reset(w, r)
+
 	rt, err := e.HandlerRoute(ctx)
 	if err != nil {
 		rt.Handler = defaultErrorHandler(rt.Handler, err)
@@ -264,6 +274,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rt.Handler = e.addMiddleware(rt.Handler)
 	}
 
+	fmt.Println(ctx)
 	if err := rt.Handler(ctx); err != nil {
 		e.HandlerError(err, ctx)
 	}
@@ -273,28 +284,28 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // HandlerRoute is used running context http
 func (e *Engine) HandlerRoute(c *Context) (r Route, werrx *WrapError) {
-
-	sort.Slice(e.Route, func(i, j int) bool {
-		return (e.Route[i].Path[1:len(e.Route[i].Path)] == c.URL.String()[1:len(c.URL.String())])
-	})
-
-	for _, rt := range e.Route {
-
-		e.Node.SetNode(c, rt)
+	werrx = &WrapError{}
+	for _, v := range e.Route[c.Method] {
+		e.Node.SetNode(c, v)
 		url, err := e.Node.ReserverURI()
 		if err != nil {
+			switch err.Error() {
+			case http.StatusText(http.StatusNotFound):
+				werrx.Code = http.StatusNotFound
+			default:
+				werrx.Code = http.StatusInternalServerError
+			}
 			werrx.Message = err.Error()
-			werrx.Code = http.StatusInternalServerError
-			return rt, werrx
+
+			return v, werrx
 		}
 		uriCtx := c.URL.EscapedPath()[1:len(c.URL.EscapedPath())]
 		if uriCtx == url {
-			if c.Method != rt.Method {
-				return rt, Err405
+			if c.Method != v.Method {
+				return r, Err405
 			}
-			return rt, werrx
+			return v, nil
 		}
-
 	}
 
 	return r, Err404

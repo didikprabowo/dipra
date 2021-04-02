@@ -2,6 +2,7 @@ package dipra
 
 import (
 	"errors"
+	"net/http"
 	"path"
 	"regexp"
 	"strings"
@@ -34,7 +35,7 @@ func (e *Node) ReserverURI() (out string, err error) {
 	uri := strings.Split(e.CleanPath(e.Ctx.RequestURI), "/")
 
 	if len(rt) != len(uri) {
-		return "", err
+		return "", errors.New(http.StatusText(http.StatusNotFound))
 	}
 	Qpath := make(map[string]bool)
 
