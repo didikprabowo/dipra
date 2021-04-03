@@ -274,7 +274,6 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rt.Handler = e.addMiddleware(rt.Handler)
 	}
 
-	fmt.Println(ctx)
 	if err := rt.Handler(ctx); err != nil {
 		e.HandlerError(err, ctx)
 	}

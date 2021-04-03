@@ -28,47 +28,47 @@ func (e *Node) ReserverURI() (out string, err error) {
 	e.Ctx.Params.clean()
 
 	var (
-		newURI []string
+		uries []string
+		rt    = strings.Split(e.CleanPath(e.Route.Path), "/")
+		uri   = strings.Split(e.CleanPath(e.Ctx.RequestURI), "/")
+		qpath = make(map[string]bool)
 	)
-
-	rt := strings.Split(e.CleanPath(e.Route.Path), "/")
-	uri := strings.Split(e.CleanPath(e.Ctx.RequestURI), "/")
-
-	if len(rt) != len(uri) {
-		return "", errors.New(http.StatusText(http.StatusNotFound))
-	}
-	Qpath := make(map[string]bool)
 
 	index := 0
 	for i := 0; i < len(rt); i++ {
-
 		if rt[i] == "" {
 			continue
 		}
 
 		switch {
 		case strings.HasPrefix(rt[i], ":"):
+
 			param := Param{
 				Key:   rt[i][1:len(rt[i])],
 				Value: uri[i],
 			}
 
 			switch {
-			case Qpath[param.Key]:
+			case qpath[param.Key]:
 				return out, errors.New("Can't used double parameter")
 			default:
 				rt[i] = uri[i]
 				index++
 				e.Ctx.Params.SetParam(param)
-				Qpath[param.Key] = true
+				qpath[param.Key] = true
 			}
 		case strings.HasPrefix(rt[i], "*"):
-			rt[i] = uri[i]
+
+			rt[i] = strings.Join(uri[i:(len(uri))], "/")
+		}
+
+		if rt[i] == "" {
+			err = errors.New(http.StatusText(http.StatusNotFound))
+			return "", err
 		}
 
 		// Validation Request URL
 		pathValidation := func(path string) (err error) {
-
 			isAllow := regexp.MustCompile(`[a-zA-Z0-9]$`)
 			ok := isAllow.MatchString(path)
 			if !ok {
@@ -79,12 +79,12 @@ func (e *Node) ReserverURI() (out string, err error) {
 
 		err = pathValidation(rt[i])
 
-		newURI = append(newURI, rt[i])
+		uries = append(uries, rt[i])
 	}
 
-	e.Fullpatch = newURI
+	e.Fullpatch = uries
 
-	path := strings.Join(newURI, "/")
+	path := strings.Join(uries, "/")
 	pacher := e.Route.Path
 
 	e.Ctx.SetPath("/" + path)

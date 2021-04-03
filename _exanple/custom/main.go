@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"net/http"
 
 	"github.com/didikprabowo/dipra"
 )
@@ -9,23 +9,14 @@ import (
 func main() {
 
 	route := dipra.Default()
-	// route.GET("/", func(c *dipra.Context) error {
-	// 	return c.JSON(200, "DIDIK")
-	// 	// return nil
-	// })
-	// route.Any("/", func(c *dipra.Context) error {
-	// 	// return c.Ha
-	// 	c.Han
-	// 	// return nil
-	// })
-	s := route.Group("/didik")
-	s.GET("/tes", func(c *dipra.Context) (err error) {
-		fmt.Println(c.GetHeader("*"))
-		return fmt.Errorf("tes")
+	s := route.Group("/v1/:base_path")
+	s.Any("/*", func(c *dipra.Context) (err error) {
+		return c.JSON(http.StatusOK, dipra.M{
+			"base_path": c.Param("base_path"),
+		})
 	})
-	// route.GET("/didik", func(c *dipra.Context) (err error) {
-	// 	return c.JSON(300, "OKE")
-	// })
+
+	// route
 
 	route.Run(":9020")
 }
