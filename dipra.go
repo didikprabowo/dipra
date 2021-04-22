@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"sort"
 	"strings"
 	"sync"
 )
@@ -39,7 +38,7 @@ type (
 		Prefix string
 
 		// Route
-		Route []Route
+		route route
 
 		// MiddlewareFunc func
 		HandleMiddleware []MiddlewareFunc
@@ -47,18 +46,13 @@ type (
 		// Sync.Pool
 		Pool sync.Pool
 
-		// Node
-		Node Node
-
 		// IsDebug...
 		IsDebug bool
 	}
 
 	// Route for handler routing
-	Route struct {
-		Path    string
-		Method  string
-		Handler HandlerFunc
+	route struct {
+		trees map[string]*node
 	}
 
 	// M map[string]interface{}
@@ -73,29 +67,11 @@ const (
 // Default Engine
 func Default() *Engine {
 	e := &Engine{
-		Route: []Route{},
-		Node:  Node{},
+		route: route{map[string]*node{}},
 	}
 	e.Pool.New = func() interface{} {
 		return e.InitialContext(nil, nil)
 	}
-	e.Route = append(e.Route, Route{
-		Path:   "/",
-		Method: http.MethodGet,
-		Handler: func(c *Context) error {
-			return c.JSON(http.StatusOK, M{
-				"version":     version,
-				"message":     "Welcome to dipra, have fun",
-				"code":        http.StatusOK,
-				"quick_start": "https://github.com/didikprabowo/dipra#Installation",
-				"language":    "GO(Golang)",
-				"author": M{
-					"name":   "Didik Prabowo",
-					"github": "https://github.com/didikprabowo",
-				},
-			})
-		},
-	})
 	e.IsDebug = true
 	return e
 }
@@ -124,16 +100,15 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 // AddRoute is used for set routing(path,mehtod, handle),
 // By besides be able to set middleware
 func (e *Engine) AddRoute(path, method string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-
-	if exist := e.findRouter(method, path, handler); !exist {
-		e.Route = append(e.Route,
-			Route{Path: e.Prefix + path,
-				Method:  method,
-				Handler: handler,
-			})
+	nm := e.route.trees[method]
+	if nm == nil {
+		nm = &node{}
+		e.route.trees[method] = nm
 	}
 
 	e.HandleMiddleware = append(e.HandleMiddleware, middleware...)
+
+	nm.insert(method, path, handler)
 }
 
 // Use is used for add handlefuncs
@@ -255,49 +230,37 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := e.Pool.Get().(*Context)
 	ctx.Reset(w, r)
-	rt, err := e.HandlerRoute(ctx)
-	if err != nil {
-		rt.Handler = defaultErrorHandler(rt.Handler, err)
-	}
-
-	if e.HandleMiddleware != nil {
-		rt.Handler = e.addMiddleware(rt.Handler)
-	}
-
-	if err := rt.Handler(ctx); err != nil {
-		e.HandlerError(err, ctx)
-	}
-
+	e.HandlerRoute(ctx)
 	e.Pool.Put(ctx)
 }
 
 // HandlerRoute is used running context http
-func (e *Engine) HandlerRoute(c *Context) (r Route, werrx *WrapError) {
+func (e *Engine) HandlerRoute(c *Context) {
+	reqMethod := c.Method
+	reqURL := c.URL.Path
 
-	sort.Slice(e.Route, func(i, j int) bool {
-		return (e.Route[i].Path[1:len(e.Route[i].Path)] == c.URL.String()[1:len(c.URL.String())])
-	})
+	root := e.route.trees[reqMethod]
+	if root != nil {
+		ok, _, h := root.find(reqURL)
 
-	for _, rt := range e.Route {
-
-		e.Node.SetNode(c, rt)
-		url, err := e.Node.ReserverURI()
-		if err != nil {
-			werrx.Message = err.Error()
-			werrx.Code = http.StatusInternalServerError
-			return rt, werrx
-		}
-		uriCtx := c.URL.EscapedPath()[1:len(c.URL.EscapedPath())]
-		if uriCtx == url {
-			if c.Method != rt.Method {
-				return rt, Err405
+		if ok {
+			if e.HandleMiddleware != nil {
+				h = e.addMiddleware(h)
 			}
-			return rt, werrx
+
+			if err := h(c); err != nil {
+				e.HandlerError(err, c)
+
+			}
+			return
 		}
 
 	}
 
-	return r, Err404
+	if err := defaultErrorHandler(
+		root.HandleFunc, Err404)(c); err != nil {
+		e.HandlerError(err, c)
+	}
 }
 
 // WrapMiddleware is used wrapping with returns HandlerFunc

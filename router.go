@@ -1,7 +1,6 @@
 package dipra
 
 import (
-	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -51,33 +50,33 @@ func (e *Engine) allowPath(p string) (ok bool) {
 	findRouter for used to checking existing path,
 	method and handler
 */
-func (e *Engine) findRouter(m, p string, h HandlerFunc) (exist bool) {
+// func (e *Engine) findRouter(m, p string, h HandlerFunc) (exist bool) {
 
-	if ok := e.allowMethods(m); !ok {
-		log.Printf("Method %s not allow", m)
-		return
-	}
+// 	if ok := e.allowMethods(m); !ok {
+// 		log.Printf("Method %s not allow", m)
+// 		return
+// 	}
 
-	if ok := e.allowPath(p); !ok {
-		log.Printf("Path %s is invalid syntax", p)
-		return
-	}
+// 	if ok := e.allowPath(p); !ok {
+// 		log.Printf("Path %s is invalid syntax", p)
+// 		return
+// 	}
 
-	toLower := func(s string) string {
-		return strings.ToLower(s)
-	}
+// 	toLower := func(s string) string {
+// 		return strings.ToLower(s)
+// 	}
 
-	for i := range e.getRoutes() {
-		if toLower(e.Route[i].Method) == toLower(m) &&
-			toLower(e.Route[i].Path) == toLower(p) {
-			e.Route[i].Handler = h
-			return true
-		}
-	}
-	return exist
-}
+// 	for i := range e.getRoutes() {
+// 		if toLower(e.Route[i].Method) == toLower(m) &&
+// 			toLower(e.Route[i].Path) == toLower(p) {
+// 			e.Route[i].Handler = h
+// 			return true
+// 		}
+// 	}
+// 	return exist
+// }
 
-// getRoutes for get The routes you define
-func (e *Engine) getRoutes() []Route {
-	return e.Route
-}
+// // getRoutes for get The routes you define
+// func (e *Engine) getRoutes() []Route {
+// 	return e.Route
+// }
