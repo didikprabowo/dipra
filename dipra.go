@@ -34,25 +34,16 @@ type (
 
 	// Engine core of dipra
 	Engine struct {
-		// Prefix
-		Prefix string
-
-		// Route
-		route route
-
-		// MiddlewareFunc func
-		HandleMiddleware []MiddlewareFunc
-
-		// Sync.Pool
-		Pool sync.Pool
-
-		// IsDebug...
-		IsDebug bool
+		route      route
+		middleware []MiddlewareFunc
+		pool       sync.Pool
+		IsDebug    bool
 	}
 
 	// Route for handler routing
 	route struct {
 		trees map[string]*node
+		pool  sync.Pool
 	}
 
 	// M map[string]interface{}
@@ -67,9 +58,11 @@ const (
 // Default Engine
 func Default() *Engine {
 	e := &Engine{
-		route: route{map[string]*node{}},
+		route: route{
+			trees: map[string]*node{},
+		},
 	}
-	e.Pool.New = func() interface{} {
+	e.pool.New = func() interface{} {
 		return e.InitialContext(nil, nil)
 	}
 	e.IsDebug = true
@@ -90,7 +83,7 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 			Response:   w,
 			StatusCode: http.StatusOK,
 		},
-		Params:  Param{},
+		params:  &params{},
 		Binding: Binding{Request: r},
 	}
 
@@ -99,28 +92,29 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 
 // AddRoute is used for set routing(path,mehtod, handle),
 // By besides be able to set middleware
-func (e *Engine) AddRoute(path, method string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+func (e *Engine) AddRoute(path, method string, h HandlerFunc, mh ...MiddlewareFunc) {
+
+	isPathValid(path)
+
 	nm := e.route.trees[method]
 	if nm == nil {
 		nm = &node{}
 		e.route.trees[method] = nm
 	}
+	if !e.route.allowMethods(method) {
+		panic("dipra : method not allowed")
+	}
 
-	e.HandleMiddleware = append(e.HandleMiddleware, middleware...)
+	if len(mh) > 0 {
+		h = applyMiddleware(h, mh...)
+	}
 
-	nm.insert(method, path, handler)
+	nm.insert(method, path, h)
 }
 
 // Use is used for add handlefuncs
 func (e *Engine) Use(middleware ...MiddlewareFunc) {
-	e.HandleMiddleware = append(e.HandleMiddleware, middleware...)
-}
-
-// Group is used for grouped route
-func (e *Engine) Group(group string, m ...MiddlewareFunc) *Engine {
-	e.Prefix = group
-	e.HandleMiddleware = append(e.HandleMiddleware, m...)
-	return e
+	e.middleware = append(e.middleware, middleware...)
 }
 
 // GET is used HTTP Request with GET METHOD
@@ -148,19 +142,11 @@ func (e *Engine) DELETE(path string, handler HandlerFunc, middleware ...Middlewa
 	e.AddRoute(path, http.MethodDelete, handler, middleware...)
 }
 
-// OPTION is used HTTP Request with OPTION METHOD
-func (e *Engine) OPTION(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddRoute(path, http.MethodOptions, handler, middleware...)
-}
-
-// TRACE is used HTTP Request with TRACE METHOD
-func (e *Engine) TRACE(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddRoute(path, http.MethodTrace, handler, middleware...)
-}
-
-// CONNECT is used HTTP Request with CONNECT METHOD
-func (e *Engine) CONNECT(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddRoute(path, http.MethodConnect, handler, middleware...)
+// ANY is used HTTP Request with ALL METHOD
+func (e *Engine) ANY(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	for _, v := range allowMethod {
+		e.AddRoute(path, v, handler, middleware...)
+	}
 }
 
 // Static is used define http to get file type
@@ -228,47 +214,55 @@ func (e *Engine) HandlerError(err error, c *Context) {
 // ServeHTTP is used run http server
 func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	ctx := e.Pool.Get().(*Context)
+	ctx := e.pool.Get().(*Context)
 	ctx.Reset(w, r)
 	e.HandlerRoute(ctx)
-	e.Pool.Put(ctx)
+	e.pool.Put(ctx)
 }
 
 // HandlerRoute is used running context http
 func (e *Engine) HandlerRoute(c *Context) {
+
 	reqMethod := c.Method
 	reqURL := c.URL.Path
+	if reqURL[len(reqURL)-1] == '/' && len(reqURL) > 1 {
+		reqURL = reqURL[:len(reqURL)-2]
+	}
+
+	isPathValid(reqURL)
+
+	h := HandlerFunc(func(c *Context) error {
+		return Err404
+	})
 
 	root := e.route.trees[reqMethod]
 	if root != nil {
-		ok, _, h := root.find(reqURL)
-
-		if ok {
-			if e.HandleMiddleware != nil {
-				h = e.addMiddleware(h)
+		_, params, hr := root.find(reqURL, c.params)
+		if hr == nil {
+			h = defaultErrorHandler(hr, Err404)
+		} else {
+			h = hr
+			if params != nil {
+				c.params.putParams(params)
 			}
-
-			if err := h(c); err != nil {
-				e.HandlerError(err, c)
-
-			}
-			return
 		}
-
 	}
 
-	if err := defaultErrorHandler(
-		root.HandleFunc, Err404)(c); err != nil {
+	if e.middleware != nil {
+		h = applyMiddleware(h, e.middleware...)
+	}
+
+	if err := h(c); err != nil {
 		e.HandlerError(err, c)
 	}
+
+	return
+
 }
 
-// WrapMiddleware is used wrapping with returns HandlerFunc
-func (e *Engine) addMiddleware(h HandlerFunc) HandlerFunc {
-	for i := len(e.HandleMiddleware) - 1; i >= 0; i-- {
-		if e.HandleMiddleware[i](h) != nil {
-			h = e.HandleMiddleware[i](h)
-		}
+func applyMiddleware(h HandlerFunc, middleware ...MiddlewareFunc) HandlerFunc {
+	for i := len(middleware) - 1; i >= 0; i-- {
+		h = middleware[i](h)
 	}
 	return h
 }

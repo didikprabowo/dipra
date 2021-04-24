@@ -1,39 +1,34 @@
 package dipra
 
 // Param ...
-type Param struct {
-	Index int
-	Key   string
-	Value string
-}
-
-var params []Param
-
-// SetParam ...
-func (p *Param) SetParam(param Param) {
-	params = append(params, param)
-}
-
-// Param ...
-func (p *Param) Param(b string) string {
-	return p.ParamByName(b)
-}
-
-// ParamByName ...
-func (p *Param) ParamByName(b string) string {
-	for _, v := range params {
-		if v.Key == b {
-			return v.Value
-		}
+type (
+	viewParam struct {
+		Key   string
+		Value string
 	}
-	return ""
-}
 
-// GetParam ...
-func (p *Param) GetParam() *Param {
+	params []viewParam
+)
+
+func (p *params) listParam() *params {
 	return p
 }
 
-func (p *Param) clean() {
-	params = []Param{}
+func (p *params) putParams(v *params) {
+
+	if v == nil {
+		return
+	}
+
+	*p = append(*p, *v...)
+}
+
+func (p *params) getParam(search string) string {
+	for _, v := range *p {
+		if v.Key == search {
+			return v.Value
+		}
+	}
+
+	return ""
 }

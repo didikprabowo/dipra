@@ -27,6 +27,10 @@ func (n *node) insert(method, path string, h HandlerFunc) {
 		panic("dipra : invalid node")
 	}
 
+	if h == nil {
+		panic("dipra : Hander must be not nil")
+	}
+
 	if n.path == "" && n.label == "" {
 		n.insertChild(path, h)
 		n.nodeType = root
@@ -51,11 +55,12 @@ walk:
 		if i < lp {
 
 			child := &node{
-				path:       n.path[i:],
-				label:      n.label,
-				nodeType:   static,
-				children:   n.children,
-				HandleFunc: n.HandleFunc,
+				path:        n.path[i:],
+				label:       n.label,
+				nodeType:    static,
+				children:    n.children,
+				HandleFunc:  n.HandleFunc,
+				isWildChild: n.isWildChild,
 			}
 			n.label = string(n.path[i])
 			n.children = []*node{child}
@@ -64,7 +69,18 @@ walk:
 		}
 
 		if i < ls {
+
 			path = path[i:]
+
+			if n.isWildChild {
+				if len(path) >= len(n.path) &&
+					n.path == path[:len(n.path)] &&
+					(len(n.path) >= len(path) || path[len(n.path)] == '/') {
+					continue walk
+				} else {
+					panic("path is conflict")
+				}
+			}
 
 			prefix := path[0]
 			for _, v := range n.label {
@@ -168,20 +184,21 @@ func (n *node) insertHandle(h HandlerFunc) {
 	n.HandleFunc = h
 }
 
-func (n *node) find(path string) (ok bool, fpath string, HandleFunc HandlerFunc) {
+func (n *node) find(path string, params *params) (ok bool, ps *params, HandleFunc HandlerFunc) {
 	if path == "" {
 		panic("dipra : path is empty")
 	}
 
 walk:
 	for {
-		search := n.path
+		// search := path
+		cpath := n.path
+		if len(path) > len(cpath) {
 
-		if len(path) > len(search) {
-			if path[:len(n.path)] == (n.path) {
+			if path[:len(cpath)] == cpath {
 
-				path = path[len(search):]
-				fpath += search
+				path = path[len(cpath):]
+
 				prefix := path[0]
 
 				if !n.isWildChild {
@@ -191,13 +208,59 @@ walk:
 							continue walk
 						}
 					}
+
+					// check route handler
+
+					if path == "/" && n.HandleFunc != nil {
+						ok = true
+					}
+					return
+				}
+
+				n = n.children[0]
+				switch n.nodeType {
+				case param:
+					i := 0
+					lp := len(path)
+					for ; i < lp && path[i] != '/'; i++ {
+					}
+
+					if params != nil {
+						if ps == nil {
+							ps = params
+						}
+
+						*ps = append(*ps, viewParam{
+							Key:   n.path[1:],
+							Value: path[:i],
+						})
+					}
+
+					if i < len(path) {
+						if len(n.children) > 0 {
+							path = path[i:]
+							n = n.children[0]
+							continue walk
+						}
+
+						ok = (len(path) == i+1)
+						return
+					}
+
+					if n.HandleFunc != nil {
+						HandleFunc = n.HandleFunc
+						return
+					} else if len(n.children) == 1 {
+						n = n.children[0]
+						ok = (n.path == "/" && n.HandleFunc != nil) || (n.path == "" && n.label == "/")
+					}
+
 					return
 				}
 			}
-		} else if search == path {
+		} else if cpath == path {
 			HandleFunc = n.HandleFunc
 			ok = true
-			fpath += search
 		}
 
 		return

@@ -1,5 +1,7 @@
 package dipra
 
+import "regexp"
+
 const (
 	// Reset color
 	Reset = "\033[0m"
@@ -20,3 +22,10 @@ const (
 	// White color
 	White = "\033[97m"
 )
+
+func isPathValid(path string) {
+	if matches := regexp.MustCompile(`([\w\._-]+)$`).
+		FindStringSubmatch(path); len(matches) < 1 {
+		panic("path not suport or path is invalid")
+	}
+}
