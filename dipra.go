@@ -37,6 +37,7 @@ type (
 		route      route
 		middleware []MiddlewareFunc
 		pool       sync.Pool
+		group      []groupRoute
 		IsDebug    bool
 	}
 
@@ -61,10 +62,12 @@ func Default() *Engine {
 		route: route{
 			trees: map[string]*node{},
 		},
+		group: []groupRoute{},
 	}
 	e.pool.New = func() interface{} {
 		return e.InitialContext(nil, nil)
 	}
+
 	e.IsDebug = true
 	return e
 }
@@ -84,7 +87,7 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 			StatusCode: http.StatusOK,
 		},
 		params:  &params{},
-		Binding: Binding{Request: r},
+		Binding: Binding{request: r},
 	}
 
 	return c
@@ -147,6 +150,30 @@ func (e *Engine) ANY(path string, handler HandlerFunc, middleware ...MiddlewareF
 	for _, v := range allowMethod {
 		e.AddRoute(path, v, handler, middleware...)
 	}
+}
+
+// ANY is used HTTP Request with ALL METHOD
+func (e *Engine) Group(prefix string, middleware ...MiddlewareFunc) (group Group) {
+
+	if prefix == "" || prefix == "/" {
+		panic("dipra : prefix is required or should not slash ")
+	}
+
+	lp := len(prefix)
+	if prefix[lp-1] == '/' {
+		prefix = prefix[:lp-2]
+	}
+
+	for _, g := range e.group {
+		if g.prefix == prefix {
+			panic("dipra : group is already exist ")
+		}
+	}
+
+	gr := NewGroupRoute(prefix, e)
+	gr.use(middleware...)
+
+	return gr
 }
 
 // Static is used define http to get file type
@@ -236,6 +263,7 @@ func (e *Engine) HandlerRoute(c *Context) {
 	})
 
 	root := e.route.trees[reqMethod]
+
 	if root != nil {
 		_, params, hr := root.find(reqURL, c.params)
 		if hr == nil {

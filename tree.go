@@ -1,7 +1,7 @@
 package dipra
 
 type (
-	nodeType uint8
+	nodeType uint16
 	node     struct {
 		nodeType    nodeType
 		path        string
@@ -16,6 +16,7 @@ const (
 	static nodeType = iota
 	root
 	param
+	all
 )
 
 func (n *node) insert(method, path string, h HandlerFunc) {
@@ -94,7 +95,7 @@ walk:
 				}
 			}
 
-			if prefix != ':' {
+			if prefix != ':' && prefix != '*' {
 				n.label += string(prefix)
 				child := &node{}
 				n.children = append(n.children, child)
@@ -145,6 +146,28 @@ func (n *node) insertChild(path string, h HandlerFunc) {
 			n.insertHandle(h)
 			return
 		}
+
+		i--
+		if path[i] != '/' {
+			panic("no / before catch-all in path ")
+		}
+
+		n.path = path[:i]
+
+		child := &node{
+			isWildChild: true,
+			nodeType:    all,
+		}
+		n.children = []*node{child}
+		n.label = "/"
+		n = child
+
+		child = &node{
+			path:       path[i:],
+			nodeType:   all,
+			HandleFunc: h,
+		}
+		n.children = []*node{child}
 		return
 	}
 
@@ -155,7 +178,7 @@ func (n *node) insertChild(path string, h HandlerFunc) {
 func (n *node) findWildcard(path string) (i int, wilchard string) {
 
 	for i, l := 0, len(path); i < l; i++ {
-		if path[i] == ':' {
+		if path[i] == ':' || path[i] == '*' {
 			j := i
 			for ; i < l && path[i] != '/'; i++ {
 			}
@@ -194,7 +217,6 @@ walk:
 		// search := path
 		cpath := n.path
 		if len(path) > len(cpath) {
-
 			if path[:len(cpath)] == cpath {
 
 				path = path[len(cpath):]
@@ -202,22 +224,24 @@ walk:
 				prefix := path[0]
 
 				if !n.isWildChild {
+
 					for i, v := range n.label {
 						if byte(v) == prefix {
+
 							n = n.children[i]
 							continue walk
 						}
 					}
 
-					// check route handler
-
 					if path == "/" && n.HandleFunc != nil {
 						ok = true
 					}
+
 					return
 				}
 
 				n = n.children[0]
+
 				switch n.nodeType {
 				case param:
 					i := 0
@@ -256,9 +280,13 @@ walk:
 					}
 
 					return
+				case all:
+					HandleFunc = n.HandleFunc
+					return
 				}
 			}
 		} else if cpath == path {
+
 			HandleFunc = n.HandleFunc
 			ok = true
 		}

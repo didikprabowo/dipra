@@ -1,6 +1,8 @@
 package dipra
 
-import "regexp"
+import (
+	"regexp"
+)
 
 const (
 	// Reset color
@@ -24,8 +26,13 @@ const (
 )
 
 func isPathValid(path string) {
-	if matches := regexp.MustCompile(`([\w\._-]+)$`).
+
+	if path[len(path)-1] == '/' {
+		path = path[:len(path)-1]
+	}
+
+	if matches := regexp.MustCompile(`([\w\*\._-]+)$`).
 		FindStringSubmatch(path); len(matches) < 1 {
-		panic("path not suport or path is invalid")
+		panic("path is not permitted")
 	}
 }

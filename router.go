@@ -5,7 +5,6 @@ import (
 )
 
 var (
-	// List method is allowed
 	allowMethod = []string{
 		http.MethodGet,
 		http.MethodDelete,
@@ -22,10 +21,4 @@ func (e *route) allowMethods(m string) (ok bool) {
 		}
 	}
 	return ok
-}
-
-func (r *route) getParams() *params {
-	ps, _ := r.pool.Get().(*params)
-	*ps = (*ps)[0:0]
-	return ps
 }

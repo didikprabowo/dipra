@@ -11,7 +11,6 @@ import (
 func main() {
 
 	r := dipra.Default()
-	r.Use(dipra.Logger())
 
 	// Normal Group
 	v1 := r.Group("/v1")
