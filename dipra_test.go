@@ -149,7 +149,7 @@ func TestHandlerError(t *testing.T) {
 				ht := httptest.NewRequest(http.MethodGet, "/test-handler-error", nil)
 				rec := httptest.NewRecorder()
 				e.ServeHTTP(rec, ht)
-				
+
 				assert.Equal(t, http.StatusInternalServerError, rec.Code)
 				assert.Equal(t, rec.Body.String(), "{\"error\":{\"code\":500,\"message\":\"test-handler-error\"}}")
 			}
@@ -184,19 +184,4 @@ func Test404(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 	assert.Equal(t, rec.Body.String(), "{\"error\":{\"code\":404,\"message\":\"Not Found\"}}")
-}
-
-func Test405(t *testing.T) {
-	e := Default()
-
-	e.GET("/hai", func(c *Context) error {
-		return c.String(http.StatusOK, "Hai....")
-	})
-
-	ht := httptest.NewRequest(http.MethodPost, "/hai", nil)
-	rec := httptest.NewRecorder()
-	e.ServeHTTP(rec, ht)
-
-	assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
-	assert.Equal(t, rec.Body.String(), "{\"error\":{\"code\":405,\"message\":\"Method Not Allowed\"}}")
 }

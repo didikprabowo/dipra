@@ -11,8 +11,9 @@ import (
 func main() {
 
 	r := dipra.Default()
-	r.Use(dipra.Logger())
-
+	r.GET("/", func(c *dipra.Context) error {
+		return c.String(200, "welcome")
+	})
 	// Normal Group
 	v1 := r.Group("/v1")
 

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"sort"
 	"strings"
 	"sync"
 )
@@ -35,30 +34,17 @@ type (
 
 	// Engine core of dipra
 	Engine struct {
-		// Prefix
-		Prefix string
-
-		// Route
-		Route []Route
-
-		// MiddlewareFunc func
-		HandleMiddleware []MiddlewareFunc
-
-		// Sync.Pool
-		Pool sync.Pool
-
-		// Node
-		Node Node
-
-		// IsDebug...
-		IsDebug bool
+		route      route
+		middleware []MiddlewareFunc
+		pool       sync.Pool
+		group      []groupRoute
+		IsDebug    bool
 	}
 
 	// Route for handler routing
-	Route struct {
-		Path    string
-		Method  string
-		Handler HandlerFunc
+	route struct {
+		trees map[string]*node
+		pool  sync.Pool
 	}
 
 	// M map[string]interface{}
@@ -73,29 +59,15 @@ const (
 // Default Engine
 func Default() *Engine {
 	e := &Engine{
-		Route: []Route{},
-		Node:  Node{},
+		route: route{
+			trees: map[string]*node{},
+		},
+		group: []groupRoute{},
 	}
-	e.Pool.New = func() interface{} {
+	e.pool.New = func() interface{} {
 		return e.InitialContext(nil, nil)
 	}
-	e.Route = append(e.Route, Route{
-		Path:   "/",
-		Method: http.MethodGet,
-		Handler: func(c *Context) error {
-			return c.JSON(http.StatusOK, M{
-				"version":     version,
-				"message":     "Welcome to dipra, have fun",
-				"code":        http.StatusOK,
-				"quick_start": "https://github.com/didikprabowo/dipra#Installation",
-				"language":    "GO(Golang)",
-				"author": M{
-					"name":   "Didik Prabowo",
-					"github": "https://github.com/didikprabowo",
-				},
-			})
-		},
-	})
+
 	e.IsDebug = true
 	return e
 }
@@ -114,8 +86,8 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 			Response:   w,
 			StatusCode: http.StatusOK,
 		},
-		Params:  Param{},
-		Binding: Binding{Request: r},
+		params:  &params{},
+		Binding: Binding{request: r},
 	}
 
 	return c
@@ -123,29 +95,27 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 
 // AddRoute is used for set routing(path,mehtod, handle),
 // By besides be able to set middleware
-func (e *Engine) AddRoute(path, method string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+func (e *Engine) AddRoute(path, method string, h HandlerFunc, mh ...MiddlewareFunc) {
 
-	if exist := e.findRouter(method, path, handler); !exist {
-		e.Route = append(e.Route,
-			Route{Path: e.Prefix + path,
-				Method:  method,
-				Handler: handler,
-			})
+	nm := e.route.trees[method]
+	if nm == nil {
+		nm = &node{}
+		e.route.trees[method] = nm
+	}
+	if !e.route.allowMethods(method) {
+		panic("dipra : method not allowed")
 	}
 
-	e.HandleMiddleware = append(e.HandleMiddleware, middleware...)
+	if len(mh) > 0 {
+		h = applyMiddleware(h, mh...)
+	}
+
+	nm.insert(method, path, h)
 }
 
 // Use is used for add handlefuncs
 func (e *Engine) Use(middleware ...MiddlewareFunc) {
-	e.HandleMiddleware = append(e.HandleMiddleware, middleware...)
-}
-
-// Group is used for grouped route
-func (e *Engine) Group(group string, m ...MiddlewareFunc) *Engine {
-	e.Prefix = group
-	e.HandleMiddleware = append(e.HandleMiddleware, m...)
-	return e
+	e.middleware = append(e.middleware, middleware...)
 }
 
 // GET is used HTTP Request with GET METHOD
@@ -173,19 +143,35 @@ func (e *Engine) DELETE(path string, handler HandlerFunc, middleware ...Middlewa
 	e.AddRoute(path, http.MethodDelete, handler, middleware...)
 }
 
-// OPTION is used HTTP Request with OPTION METHOD
-func (e *Engine) OPTION(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddRoute(path, http.MethodOptions, handler, middleware...)
+// ANY is used HTTP Request with ALL METHOD
+func (e *Engine) ANY(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
+	for _, v := range allowMethod {
+		e.AddRoute(path, v, handler, middleware...)
+	}
 }
 
-// TRACE is used HTTP Request with TRACE METHOD
-func (e *Engine) TRACE(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddRoute(path, http.MethodTrace, handler, middleware...)
-}
+// ANY is used HTTP Request with ALL METHOD
+func (e *Engine) Group(prefix string, middleware ...MiddlewareFunc) (group Group) {
 
-// CONNECT is used HTTP Request with CONNECT METHOD
-func (e *Engine) CONNECT(path string, handler HandlerFunc, middleware ...MiddlewareFunc) {
-	e.AddRoute(path, http.MethodConnect, handler, middleware...)
+	if prefix == "" || prefix == "/" {
+		panic("dipra : prefix is required or should not slash ")
+	}
+
+	lp := len(prefix)
+	if prefix[lp-1] == '/' {
+		prefix = prefix[:lp-2]
+	}
+
+	for _, g := range e.group {
+		if g.prefix == prefix {
+			panic("dipra : group is already exist ")
+		}
+	}
+
+	gr := NewGroupRoute(prefix, e)
+	gr.use(middleware...)
+
+	return gr
 }
 
 // Static is used define http to get file type
@@ -253,59 +239,54 @@ func (e *Engine) HandlerError(err error, c *Context) {
 // ServeHTTP is used run http server
 func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	ctx := e.Pool.Get().(*Context)
+	ctx := e.pool.Get().(*Context)
 	ctx.Reset(w, r)
-	rt, err := e.HandlerRoute(ctx)
-	if err != nil {
-		rt.Handler = defaultErrorHandler(rt.Handler, err)
-	}
-
-	if e.HandleMiddleware != nil {
-		rt.Handler = e.addMiddleware(rt.Handler)
-	}
-
-	if err := rt.Handler(ctx); err != nil {
-		e.HandlerError(err, ctx)
-	}
-
-	e.Pool.Put(ctx)
+	e.HandlerRoute(ctx)
+	e.pool.Put(ctx)
 }
 
 // HandlerRoute is used running context http
-func (e *Engine) HandlerRoute(c *Context) (r Route, werrx *WrapError) {
+func (e *Engine) HandlerRoute(c *Context) {
 
-	sort.Slice(e.Route, func(i, j int) bool {
-		return (e.Route[i].Path[1:len(e.Route[i].Path)] == c.URL.String()[1:len(c.URL.String())])
-	})
-
-	for _, rt := range e.Route {
-
-		e.Node.SetNode(c, rt)
-		url, err := e.Node.ReserverURI()
-		if err != nil {
-			werrx.Message = err.Error()
-			werrx.Code = http.StatusInternalServerError
-			return rt, werrx
-		}
-		uriCtx := c.URL.EscapedPath()[1:len(c.URL.EscapedPath())]
-		if uriCtx == url {
-			if c.Method != rt.Method {
-				return rt, Err405
-			}
-			return rt, werrx
-		}
-
+	reqMethod := c.Method
+	reqURL := c.URL.Path
+	if reqURL[len(reqURL)-1] == '/' && len(reqURL) > 1 {
+		reqURL = reqURL[:len(reqURL)-2]
 	}
 
-	return r, Err404
+	h := HandlerFunc(func(c *Context) error {
+		return Err404
+	})
+
+	root := e.route.trees[reqMethod]
+
+	if root != nil {
+		_, params, hr := root.find(reqURL, c.params)
+		if hr == nil {
+			h = defaultErrorHandler(hr, Err404)
+		} else {
+			h = hr
+			if params != nil {
+				c.params.putParams(params)
+			}
+		}
+	}
+
+	if e.middleware != nil {
+		h = applyMiddleware(h, e.middleware...)
+	}
+
+	if err := h(c); err != nil {
+		e.HandlerError(err, c)
+	}
+
+	return
+
 }
 
-// WrapMiddleware is used wrapping with returns HandlerFunc
-func (e *Engine) addMiddleware(h HandlerFunc) HandlerFunc {
-	for i := len(e.HandleMiddleware) - 1; i >= 0; i-- {
-		if e.HandleMiddleware[i](h) != nil {
-			h = e.HandleMiddleware[i](h)
-		}
+func applyMiddleware(h HandlerFunc, middleware ...MiddlewareFunc) HandlerFunc {
+	for i := len(middleware) - 1; i >= 0; i-- {
+		h = middleware[i](h)
 	}
 	return h
 }

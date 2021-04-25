@@ -10,29 +10,17 @@ import (
 )
 
 type (
-	Header string
-
-	MimeType string
-
+	Header         string
+	MimeType       string
 	AccessControll string
-	// Context ...
+
 	Context struct {
-		// http.ResponseWriter
 		http.ResponseWriter
-		// *http.Request
 		*http.Request
-		// Params Param
-		Params Param
-		// Binding
+		params *params
 		Binding
-		// Engine *Engine
-		Engine *Engine
-		// Writen ResponseWriter
+		engine *Engine
 		Writen ResponseWriter
-		// Path is URL
-		Path string
-		// Patcher is URL Route
-		Patcher string
 	}
 )
 
@@ -98,43 +86,18 @@ func (c *Context) Reset(w http.ResponseWriter, r *http.Request) {
 	c.SetBind(r)
 }
 
-//QueryDefault if any else default
-func (c *Context) QueryDefault(param string, defaultValue string) string {
-	return c.GetQuery(param, defaultValue)
-}
-
 // Query by Key ?=key=value
 func (c *Context) Query(param string) string {
-	return c.GetQuery(param, "")
+	return c.getQuery(param, "")
 }
 
-// Param by wlidcard /:id
+// // Param by wlidcard /:id
 func (c *Context) Param(param string) string {
-	return c.Params.Param(param)
-}
-
-// SetPath URL
-func (c *Context) SetPath(p string) {
-	c.Path = p
-}
-
-// GetPath URL
-func (c *Context) GetPath() string {
-	return c.Path
-}
-
-// SetPatcher Curwl
-func (c *Context) SetPatcher(p string) {
-	c.Patcher = p
-}
-
-// GetPatcher Curwl
-func (c *Context) GetPatcher() string {
-	return c.Patcher
+	return c.params.getParam(param)
 }
 
 // GetQuery By param
-func (c *Context) GetQuery(param string, DefaultQuery string) string {
+func (c *Context) getQuery(param string, DefaultQuery string) string {
 	q := c.URL.Query()
 	paramValue := q.Get(param)
 	if len(paramValue) == 0 {
@@ -267,7 +230,7 @@ func (c *Context) GetRequest() *http.Request {
 
 // SetError for Get Error
 func (c *Context) SetError(err error) {
-	c.Engine.HandlerError(err, c)
+	c.engine.HandlerError(err, c)
 }
 
 // GetHeader for get value header

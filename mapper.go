@@ -14,7 +14,7 @@ type (
 		Value interface{}
 	}
 	// Mapper for instance
-	Mapper struct {
+	mapper struct {
 		Values reflect.Value
 		Type   reflect.Type
 		Field  []Field
@@ -23,7 +23,7 @@ type (
 )
 
 // Set Field key value
-func (key *Mapper) Set(v interface{}) (err error) {
+func (key *mapper) Set(v interface{}) (err error) {
 	key.Out = v
 	var valuein = reflect.ValueOf(v)
 	if valuein.Kind() == reflect.Struct {
@@ -44,7 +44,7 @@ func (key *Mapper) Set(v interface{}) (err error) {
 }
 
 // MapToStruct is used convert map to struct
-func (key *Mapper) MapToStruct(m map[string]string) (err error) {
+func (key *mapper) MapToStruct(m map[string]string) (err error) {
 	for k, vs := range m {
 		for _, kp := range key.Field {
 			if kp.Raw == k {

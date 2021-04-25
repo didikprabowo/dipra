@@ -37,16 +37,6 @@ func TestError(t *testing.T) {
 			assert.Equal(t, `{"error":`+string(jsonBytes404)+`}`, resp.Body.String())
 		})
 
-		t.Run("405", func(t *testing.T) {
-			var err error = Err405
-			jsonBytes405, _ := json.Marshal(err)
-
-			r := httptest.NewRequest(http.MethodPost, "/", nil)
-			resp := httptest.NewRecorder()
-			d.ServeHTTP(resp, r)
-			assert.Equal(t, `{"error":`+string(jsonBytes405)+`}`, resp.Body.String())
-		})
-
 		t.Run("500", func(t *testing.T) {
 
 			d.GET("/", func(c *Context) error {
