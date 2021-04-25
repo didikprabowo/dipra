@@ -97,8 +97,6 @@ func (e *Engine) InitialContext(w http.ResponseWriter, r *http.Request) *Context
 // By besides be able to set middleware
 func (e *Engine) AddRoute(path, method string, h HandlerFunc, mh ...MiddlewareFunc) {
 
-	isPathValid(path)
-
 	nm := e.route.trees[method]
 	if nm == nil {
 		nm = &node{}
@@ -255,8 +253,6 @@ func (e *Engine) HandlerRoute(c *Context) {
 	if reqURL[len(reqURL)-1] == '/' && len(reqURL) > 1 {
 		reqURL = reqURL[:len(reqURL)-2]
 	}
-
-	isPathValid(reqURL)
 
 	h := HandlerFunc(func(c *Context) error {
 		return Err404
